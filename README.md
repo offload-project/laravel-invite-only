@@ -1,6 +1,13 @@
+<p align="center">
+    <a href="https://packagist.org/packages/offload-project/laravel-invite-only"><img src="https://img.shields.io/packagist/v/offload-project/laravel-invite-only.svg?style=flat-square" alt="Latest Version on Packagist"></a>
+    <a href="https://github.com/offload-project/laravel-invite-only/actions"><img src="https://img.shields.io/github/actions/workflow/status/offload-project/laravel-invite-only/tests.yml?branch=main&style=flat-square" alt="GitHub Tests Action Status"></a>
+    <a href="https://packagist.org/packages/offload-project/laravel-invite-only"><img src="https://img.shields.io/packagist/dt/offload-project/laravel-invite-only.svg?style=flat-square" alt="Total Downloads"></a>
+</p>
+
 # Laravel Invite Only
 
-A Laravel package for managing user invitations with polymorphic relationships, token-based access, scheduled reminders, and event-driven notifications.
+A Laravel package for managing user invitations with polymorphic relationships, token-based access, scheduled reminders,
+and event-driven notifications.
 
 ## Features
 
@@ -217,6 +224,7 @@ Schedule::command('invite-only:send-reminders --mark-expired')->daily();
 ```
 
 This will:
+
 - Send reminder emails based on your `reminders.after_days` configuration
 - Optionally mark expired invitations when using `--mark-expired`
 
@@ -224,13 +232,13 @@ This will:
 
 The package fires events for all invitation lifecycle changes:
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `InvitationCreated` | `$invitation` | When a new invitation is created |
-| `InvitationAccepted` | `$invitation`, `$user` | When an invitation is accepted |
-| `InvitationDeclined` | `$invitation` | When an invitation is declined |
-| `InvitationCancelled` | `$invitation` | When an invitation is cancelled |
-| `InvitationExpired` | `$invitation` | When an invitation is marked as expired |
+| Event                 | Payload                | Description                             |
+|-----------------------|------------------------|-----------------------------------------|
+| `InvitationCreated`   | `$invitation`          | When a new invitation is created        |
+| `InvitationAccepted`  | `$invitation`, `$user` | When an invitation is accepted          |
+| `InvitationDeclined`  | `$invitation`          | When an invitation is declined          |
+| `InvitationCancelled` | `$invitation`          | When an invitation is cancelled         |
+| `InvitationExpired`   | `$invitation`          | When an invitation is marked as expired |
 
 Listen to these events in your `EventServiceProvider`:
 
@@ -268,11 +276,11 @@ Set a notification to `null` to disable it:
 
 The package registers the following routes by default:
 
-| Method | URI | Name | Description |
-|--------|-----|------|-------------|
-| GET | `/invitations/{token}` | `invitations.show` | View/redirect invitation |
-| POST | `/invitations/{token}/accept` | `invitations.accept` | Accept invitation |
-| POST | `/invitations/{token}/decline` | `invitations.decline` | Decline invitation |
+| Method | URI                            | Name                  | Description              |
+|--------|--------------------------------|-----------------------|--------------------------|
+| GET    | `/invitations/{token}`         | `invitations.show`    | View/redirect invitation |
+| POST   | `/invitations/{token}/accept`  | `invitations.accept`  | Accept invitation        |
+| POST   | `/invitations/{token}/decline` | `invitations.decline` | Decline invitation       |
 
 You can disable automatic route registration and define your own:
 
