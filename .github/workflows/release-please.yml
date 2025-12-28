@@ -1,0 +1,30 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.4.1
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: 'Release Please'
+          check-regexp: 'PHP.*'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+          allowed-conclusions: success
+
+      - name: Create Release PR
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: php
+          config-file: .github/release-please-config.json

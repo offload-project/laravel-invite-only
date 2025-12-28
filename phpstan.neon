@@ -1,0 +1,13 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+
+    # The level 9 is the highest level
+    level: 7
+
+    ignoreErrors:
+        # These traits are meant to be used by package consumers
+        - identifier: trait.unused

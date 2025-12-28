@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Laravel Invite Only Test Suite">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <!--    <coverage>-->
+    <!--        <report>-->
+    <!--            <html outputDirectory="build/coverage"/>-->
+    <!--            <text outputFile="build/coverage.txt"/>-->
+    <!--            <clover outputFile="build/logs/clover.xml"/>-->
+    <!--        </report>-->
+    <!--    </coverage>-->
+    <source>
+        <include>
+            <directory suffix=".php">./src</directory>
+        </include>
+    </source>
+</phpunit>

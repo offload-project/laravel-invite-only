@@ -1,0 +1,73 @@
+name: Dependabot Auto Merge
+
+on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+
+      - name: Wait for checks to pass
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-regexp: '.*'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Generate semantic title
+        id: semantic-title
+        run: |
+          # Extract from PR title if metadata doesn't provide it
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          
+          # Dependabot titles usually look like: "Bump package from 1.0.0 to 2.0.0"
+          if [[ "$PR_TITLE" =~ Bump\ (.*)\ from\ ([0-9]+)\. ]]; then
+            PACKAGE="${BASH_REMATCH[1]}"
+            OLD_MAJOR="${BASH_REMATCH[2]}"
+          
+            # Extract new version major
+            if [[ "$PR_TITLE" =~ to\ ([0-9]+)\. ]]; then
+              NEW_MAJOR="${BASH_REMATCH[1]}"
+          
+              if (( NEW_MAJOR > OLD_MAJOR )); then
+                PREFIX="build"  # Major version bump
+              else
+                PREFIX="chore"  # Minor/patch bump
+              fi
+            else
+              PREFIX="chore"
+            fi
+          else
+            # Fallback
+            PREFIX="chore"
+            PACKAGE="${{ steps.metadata.outputs.dependency-names }}"
+          fi
+          
+          TITLE="${PREFIX}: bump ${PACKAGE}"
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+
+      - name: Update PR title
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --title "${{ steps.semantic-title.outputs.title }}" \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve and enable auto-merge
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} --approve
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
