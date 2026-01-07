@@ -11,6 +11,7 @@ A Laravel package for managing user invitations with polymorphic relationships, 
 ## Features
 
 - **Polymorphic invitations** - Invite users to any model (teams, organizations, projects)
+- **Bulk invitations** - Invite multiple users at once with partial failure handling
 - **Token-based secure links** - Shareable invitation URLs with secure tokens
 - **Status tracking** - Pending, accepted, declined, expired, and cancelled states
 - **Automatic reminders** - Scheduled reminder emails for pending invitations
@@ -56,13 +57,23 @@ class User extends Authenticatable
 }
 ```
 
-### 2. Send an Invitation
+### 2. Send Invitations
 
 ```php
+// Single invitation
 $team->invite('user@example.com', [
     'role' => 'member',
     'invited_by' => auth()->user(),
 ]);
+
+// Bulk invitations
+$result = $team->inviteMany(
+    ['one@example.com', 'two@example.com', 'three@example.com'],
+    ['role' => 'member', 'invited_by' => auth()->user()]
+);
+
+$result->successful;  // Collection of created invitations
+$result->failed;      // Collection of failures with reasons
 ```
 
 ### 3. Handle Acceptance

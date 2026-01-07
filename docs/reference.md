@@ -24,6 +24,33 @@ InviteOnly::invite(
 
 ---
 
+### `InviteOnly::inviteMany()`
+
+Create multiple invitations at once.
+
+```php
+InviteOnly::inviteMany(
+    array $emails,
+    ?Model $invitable = null,
+    array $options = []
+): BulkInvitationResult
+```
+
+**Options:** Same as `invite()`, plus:
+- `skip_duplicates` (bool) - Skip emails with pending invitations (default: true)
+
+**Returns:** `BulkInvitationResult` with:
+- `$result->successful` - Collection of created Invitations
+- `$result->failed` - Collection of `['email' => ..., 'reason' => ...]`
+- `$result->count()` - Number of successful invitations
+- `$result->total()` - Total emails processed
+- `$result->allSuccessful()` - True if no failures
+- `$result->hasFailures()` - True if any failures
+- `$result->successfulEmails()` - Array of successful emails
+- `$result->failedEmails()` - Array of failed emails
+
+---
+
 ### `InviteOnly::accept()`
 
 Accept an invitation by token.
@@ -228,6 +255,7 @@ For models that can have invitations (Team, Organization, etc.)
 ```php
 $team->invitations(): MorphMany
 $team->invite(string $email, array $options = []): Invitation
+$team->inviteMany(array $emails, array $options = []): BulkInvitationResult
 $team->pendingInvitations(): Collection
 $team->acceptedInvitations(): Collection
 $team->validInvitations(): Collection

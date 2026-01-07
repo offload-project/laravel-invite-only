@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
+use OffloadProject\InviteOnly\BulkInvitationResult;
 use OffloadProject\InviteOnly\Exceptions\InvalidInvitationException;
 use OffloadProject\InviteOnly\Exceptions\InvitationAlreadyAcceptedException;
 use OffloadProject\InviteOnly\Exceptions\InvitationExpiredException;
@@ -23,6 +24,17 @@ interface InviteOnlyContract
      * @throws InvalidArgumentException When email format is invalid
      */
     public function invite(string $email, ?Model $invitable = null, array $options = []): Invitation;
+
+    /**
+     * Create multiple invitations at once.
+     *
+     * Invalid emails and duplicates are captured in the result's failed collection
+     * rather than throwing exceptions, allowing partial success.
+     *
+     * @param  array<int, string>  $emails
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     */
+    public function inviteMany(array $emails, ?Model $invitable = null, array $options = []): BulkInvitationResult;
 
     /**
      * Accept an invitation by token.

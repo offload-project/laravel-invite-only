@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use OffloadProject\InviteOnly\BulkInvitationResult;
 use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Events\InvitationAccepted;
 use OffloadProject\InviteOnly\Events\InvitationCancelled;
@@ -608,5 +609,118 @@ describe('sending reminders', function (): void {
 
         expect($count)->toBe(0);
         Notification::assertNotSentTo($invitation, InvitationReminder::class);
+    });
+});
+
+describe('bulk invitations', function (): void {
+    it('can invite multiple emails at once', function (): void {
+        $emails = ['one@example.com', 'two@example.com', 'three@example.com'];
+
+        $result = InviteOnly::inviteMany($emails);
+
+        expect($result)
+            ->toBeInstanceOf(BulkInvitationResult::class)
+            ->count()->toBe(3)
+            ->allSuccessful()->toBeTrue()
+            ->hasFailures()->toBeFalse();
+
+        expect($result->successful)->toHaveCount(3);
+        expect($result->successfulEmails())->toBe($emails);
+    });
+
+    it('can invite multiple emails to a model', function (): void {
+        $team = TestTeam::create(['name' => 'Test Team']);
+        $emails = ['one@example.com', 'two@example.com'];
+
+        $result = $team->inviteMany($emails, ['role' => 'member']);
+
+        expect($result->count())->toBe(2);
+        expect($result->successful->every(fn ($inv) => $inv->invitable_id === $team->id))->toBeTrue();
+        expect($result->successful->every(fn ($inv) => $inv->role === 'member'))->toBeTrue();
+    });
+
+    it('captures invalid emails as failures', function (): void {
+        $emails = ['valid@example.com', 'invalid-email', 'another@example.com', 'also-bad'];
+
+        $result = InviteOnly::inviteMany($emails);
+
+        expect($result->count())->toBe(2);
+        expect($result->hasFailures())->toBeTrue();
+        expect($result->failed)->toHaveCount(2);
+        expect($result->failedEmails())->toBe(['invalid-email', 'also-bad']);
+    });
+
+    it('skips duplicate pending invitations by default', function (): void {
+        // Create an existing invitation
+        InviteOnly::invite('existing@example.com');
+
+        $emails = ['existing@example.com', 'new@example.com'];
+
+        $result = InviteOnly::inviteMany($emails);
+
+        expect($result->count())->toBe(1);
+        expect($result->successfulEmails())->toBe(['new@example.com']);
+        expect($result->failedEmails())->toBe(['existing@example.com']);
+        expect($result->failed->first()['reason'])->toBe('Pending invitation already exists');
+    });
+
+    it('can allow duplicate invitations with skip_duplicates false', function (): void {
+        InviteOnly::invite('existing@example.com');
+
+        $emails = ['existing@example.com', 'new@example.com'];
+
+        $result = InviteOnly::inviteMany($emails, null, ['skip_duplicates' => false]);
+
+        expect($result->count())->toBe(2);
+        expect($result->allSuccessful())->toBeTrue();
+    });
+
+    it('scopes duplicate check to invitable', function (): void {
+        $team1 = TestTeam::create(['name' => 'Team 1']);
+        $team2 = TestTeam::create(['name' => 'Team 2']);
+
+        // Invite to team 1
+        $team1->invite('user@example.com');
+
+        // Same email to team 2 should work
+        $result = $team2->inviteMany(['user@example.com']);
+
+        expect($result->count())->toBe(1);
+        expect($result->allSuccessful())->toBeTrue();
+    });
+
+    it('fires events for each successful invitation', function (): void {
+        $emails = ['one@example.com', 'two@example.com'];
+
+        InviteOnly::inviteMany($emails);
+
+        Event::assertDispatchedTimes(InvitationCreated::class, 2);
+    });
+
+    it('sends notifications for each successful invitation', function (): void {
+        Notification::fake();
+
+        $emails = ['one@example.com', 'two@example.com'];
+
+        $result = InviteOnly::inviteMany($emails);
+
+        Notification::assertSentTimes(InvitationSent::class, 2);
+    });
+
+    it('returns correct total count', function (): void {
+        $emails = ['valid@example.com', 'invalid', 'another@example.com'];
+
+        $result = InviteOnly::inviteMany($emails);
+
+        expect($result->total())->toBe(3);
+        expect($result->count())->toBe(2); // successful only
+    });
+
+    it('handles empty email array', function (): void {
+        $result = InviteOnly::inviteMany([]);
+
+        expect($result->count())->toBe(0);
+        expect($result->total())->toBe(0);
+        expect($result->allSuccessful())->toBeTrue();
     });
 });

@@ -7,6 +7,7 @@ namespace OffloadProject\InviteOnly;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as BaseCollection;
 use InvalidArgumentException;
 use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
 use OffloadProject\InviteOnly\Enums\InvitationStatus;
@@ -59,6 +60,63 @@ final class InviteOnly implements InviteOnlyContract
         $this->sendNotification('invitation', $invitation);
 
         return $invitation;
+    }
+
+    /**
+     * Create multiple invitations at once.
+     *
+     * Invalid emails and duplicates are captured in the result's failed collection
+     * rather than throwing exceptions, allowing partial success.
+     *
+     * @param  array<int, string>  $emails
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     */
+    public function inviteMany(array $emails, ?Model $invitable = null, array $options = []): BulkInvitationResult
+    {
+        $skipDuplicates = $options['skip_duplicates'] ?? true;
+        unset($options['skip_duplicates']);
+
+        $successful = new BaseCollection;
+        $failed = new BaseCollection;
+
+        // Get existing pending invitation emails for this invitable to check duplicates
+        $existingEmails = $skipDuplicates
+            ? $this->getExistingPendingEmails($emails, $invitable)
+            : [];
+
+        foreach ($emails as $email) {
+            // Validate email format
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $failed->push([
+                    'email' => $email,
+                    'reason' => 'Invalid email format',
+                ]);
+
+                continue;
+            }
+
+            // Check for duplicates
+            if (in_array($email, $existingEmails, true)) {
+                $failed->push([
+                    'email' => $email,
+                    'reason' => 'Pending invitation already exists',
+                ]);
+
+                continue;
+            }
+
+            try {
+                $invitation = $this->invite($email, $invitable, $options);
+                $successful->push($invitation);
+            } catch (InvalidArgumentException $e) {
+                $failed->push([
+                    'email' => $email,
+                    'reason' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return new BulkInvitationResult($successful, $failed);
     }
 
     /**
@@ -311,6 +369,27 @@ final class InviteOnly implements InviteOnlyContract
         }
 
         return $sent;
+    }
+
+    /**
+     * Get emails that already have pending invitations.
+     *
+     * @param  array<int, string>  $emails
+     * @return array<int, string>
+     */
+    private function getExistingPendingEmails(array $emails, ?Model $invitable): array
+    {
+        $query = Invitation::whereIn('email', $emails)
+            ->where('status', InvitationStatus::Pending);
+
+        if ($invitable !== null) {
+            $query->where('invitable_type', $invitable->getMorphClass())
+                ->where('invitable_id', $invitable->getKey());
+        } else {
+            $query->whereNull('invitable_type');
+        }
+
+        return $query->pluck('email')->all();
     }
 
     /**

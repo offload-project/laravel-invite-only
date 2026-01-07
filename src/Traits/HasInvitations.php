@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
+use OffloadProject\InviteOnly\BulkInvitationResult;
 use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Facades\InviteOnly;
 use OffloadProject\InviteOnly\Models\Invitation;
@@ -38,6 +39,18 @@ trait HasInvitations
     {
         /** @var Model $this */
         return InviteOnly::invite($email, $this, $options);
+    }
+
+    /**
+     * Create multiple invitations for this model at once.
+     *
+     * @param  array<int, string>  $emails
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     */
+    public function inviteMany(array $emails, array $options = []): BulkInvitationResult
+    {
+        /** @var Model $this */
+        return InviteOnly::inviteMany($emails, $this, $options);
     }
 
     /**

@@ -26,6 +26,47 @@ $team->invite('user@example.com', [
 ]);
 ```
 
+## Invite Multiple Users
+
+```php
+$result = $team->inviteMany([
+    'alice@example.com',
+    'bob@example.com',
+    'carol@example.com',
+], [
+    'role' => 'member',
+    'invited_by' => auth()->user(),
+]);
+
+// Check results
+if ($result->hasFailures()) {
+    foreach ($result->failed as $failure) {
+        Log::warning("Failed to invite {$failure['email']}: {$failure['reason']}");
+    }
+}
+
+// Get successful invitations
+foreach ($result->successful as $invitation) {
+    // $invitation->email, $invitation->token, etc.
+}
+```
+
+### Handling Duplicates
+
+By default, emails with pending invitations are skipped:
+
+```php
+$result = $team->inviteMany(['existing@example.com', 'new@example.com']);
+// existing@example.com → failed (Pending invitation already exists)
+// new@example.com → successful
+```
+
+To allow duplicate invitations:
+
+```php
+$result = $team->inviteMany($emails, ['skip_duplicates' => false]);
+```
+
 ## List Pending Invitations
 
 ```php
