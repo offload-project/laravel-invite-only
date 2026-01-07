@@ -30,6 +30,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Users Table Name
+    |--------------------------------------------------------------------------
+    |
+    | The name of the users table for foreign key constraints in migrations.
+    | This should match the table used by your user model.
+    |
+    */
+    'users_table' => 'users',
+
+    /*
+    |--------------------------------------------------------------------------
     | Expiration Settings
     |--------------------------------------------------------------------------
     |
@@ -80,11 +91,15 @@ return [
     |
     | Configure the routes for accepting and declining invitations.
     |
+    | SECURITY NOTE: It is strongly recommended to include rate limiting
+    | middleware (e.g., 'throttle:60,1') to prevent brute-force attacks
+    | on invitation tokens.
+    |
     */
     'routes' => [
         'enabled' => true,
         'prefix' => 'invitations',
-        'middleware' => ['web'],
+        'middleware' => ['web', 'throttle:60,1'],
     ],
 
     /*
@@ -92,13 +107,14 @@ return [
     | Redirect URLs
     |--------------------------------------------------------------------------
     |
-    | Where to redirect users after accepting, declining, or when an
-    | invitation has expired.
+    | Where to redirect users after accepting, declining, when an
+    | invitation has expired, or when an error occurs.
     |
     */
     'redirect' => [
         'accepted' => '/',
         'declined' => '/',
         'expired' => '/',
+        'error' => '/',
     ],
 ];

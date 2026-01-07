@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace OffloadProject\InviteOnly\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Notifications\Notifiable;
+use OffloadProject\InviteOnly\Database\Factories\InvitationFactory;
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
 
 /**
  * @property int $id
@@ -16,7 +19,7 @@ use Illuminate\Notifications\Notifiable;
  * @property int|null $invitable_id
  * @property string $email
  * @property string $token
- * @property string $status
+ * @property InvitationStatus $status
  * @property string|null $role
  * @property array<string, mixed>|null $metadata
  * @property int|null $invited_by
@@ -49,39 +52,42 @@ use Illuminate\Notifications\Notifiable;
  */
 final class Invitation extends Model
 {
+    /** @use HasFactory<InvitationFactory> */
+    use HasFactory;
+
     use Notifiable;
 
+    /**
+     * @deprecated Use InvitationStatus::Pending instead
+     */
     public const STATUS_PENDING = 'pending';
 
+    /**
+     * @deprecated Use InvitationStatus::Accepted instead
+     */
     public const STATUS_ACCEPTED = 'accepted';
 
+    /**
+     * @deprecated Use InvitationStatus::Declined instead
+     */
     public const STATUS_DECLINED = 'declined';
 
+    /**
+     * @deprecated Use InvitationStatus::Expired instead
+     */
     public const STATUS_EXPIRED = 'expired';
 
+    /**
+     * @deprecated Use InvitationStatus::Cancelled instead
+     */
     public const STATUS_CANCELLED = 'cancelled';
 
     /** @var list<string> */
-    protected $fillable = [
-        'invitable_type',
-        'invitable_id',
-        'email',
-        'token',
-        'status',
-        'role',
-        'metadata',
-        'invited_by',
-        'accepted_by',
-        'expires_at',
-        'accepted_at',
-        'declined_at',
-        'cancelled_at',
-        'last_sent_at',
-        'reminder_count',
-    ];
+    protected $guarded = ['id'];
 
     /** @var array<string, string> */
     protected $casts = [
+        'status' => InvitationStatus::class,
         'metadata' => 'array',
         'expires_at' => 'datetime',
         'accepted_at' => 'datetime',
@@ -133,22 +139,22 @@ final class Invitation extends Model
 
     public function isPending(): bool
     {
-        return $this->status === self::STATUS_PENDING;
+        return $this->status === InvitationStatus::Pending;
     }
 
     public function isAccepted(): bool
     {
-        return $this->status === self::STATUS_ACCEPTED;
+        return $this->status === InvitationStatus::Accepted;
     }
 
     public function isDeclined(): bool
     {
-        return $this->status === self::STATUS_DECLINED;
+        return $this->status === InvitationStatus::Declined;
     }
 
     public function isExpired(): bool
     {
-        if ($this->status === self::STATUS_EXPIRED) {
+        if ($this->status === InvitationStatus::Expired) {
             return true;
         }
 
@@ -161,7 +167,7 @@ final class Invitation extends Model
 
     public function isCancelled(): bool
     {
-        return $this->status === self::STATUS_CANCELLED;
+        return $this->status === InvitationStatus::Cancelled;
     }
 
     public function isValid(): bool
@@ -171,7 +177,7 @@ final class Invitation extends Model
 
     public function markAsAccepted(?Model $user = null): self
     {
-        $this->status = self::STATUS_ACCEPTED;
+        $this->status = InvitationStatus::Accepted;
         $this->accepted_at = now();
 
         if ($user !== null) {
@@ -185,7 +191,7 @@ final class Invitation extends Model
 
     public function markAsDeclined(): self
     {
-        $this->status = self::STATUS_DECLINED;
+        $this->status = InvitationStatus::Declined;
         $this->declined_at = now();
         $this->save();
 
@@ -194,7 +200,7 @@ final class Invitation extends Model
 
     public function markAsCancelled(): self
     {
-        $this->status = self::STATUS_CANCELLED;
+        $this->status = InvitationStatus::Cancelled;
         $this->cancelled_at = now();
         $this->save();
 
@@ -203,7 +209,7 @@ final class Invitation extends Model
 
     public function markAsExpired(): self
     {
-        $this->status = self::STATUS_EXPIRED;
+        $this->status = InvitationStatus::Expired;
         $this->save();
 
         return $this;
@@ -228,17 +234,17 @@ final class Invitation extends Model
 
     public function getAcceptUrl(): string
     {
-        return route('invitations.accept', ['token' => $this->token]);
+        return route('invite-only.invitations.accept', ['token' => $this->token]);
     }
 
     public function getDeclineUrl(): string
     {
-        return route('invitations.decline', ['token' => $this->token]);
+        return route('invite-only.invitations.decline', ['token' => $this->token]);
     }
 
     public function getViewUrl(): string
     {
-        return route('invitations.show', ['token' => $this->token]);
+        return route('invite-only.invitations.show', ['token' => $this->token]);
     }
 
     public function routeNotificationForMail(): string
@@ -252,7 +258,7 @@ final class Invitation extends Model
      */
     public function scopePending(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_PENDING);
+        return $query->where('status', InvitationStatus::Pending);
     }
 
     /**
@@ -261,7 +267,7 @@ final class Invitation extends Model
      */
     public function scopeAccepted(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_ACCEPTED);
+        return $query->where('status', InvitationStatus::Accepted);
     }
 
     /**
@@ -270,7 +276,7 @@ final class Invitation extends Model
      */
     public function scopeDeclined(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_DECLINED);
+        return $query->where('status', InvitationStatus::Declined);
     }
 
     /**
@@ -279,7 +285,7 @@ final class Invitation extends Model
      */
     public function scopeExpired(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_EXPIRED);
+        return $query->where('status', InvitationStatus::Expired);
     }
 
     /**
@@ -288,7 +294,7 @@ final class Invitation extends Model
      */
     public function scopeCancelled(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_CANCELLED);
+        return $query->where('status', InvitationStatus::Cancelled);
     }
 
     /**
@@ -297,7 +303,7 @@ final class Invitation extends Model
      */
     public function scopeValid(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_PENDING)
+        return $query->where('status', InvitationStatus::Pending)
             ->where(function (Builder $q): void {
                 $q->whereNull('expires_at')
                     ->orWhere('expires_at', '>', now());
@@ -331,7 +337,7 @@ final class Invitation extends Model
     {
         $maxReminders = config('invite-only.reminders.max_reminders', 2);
 
-        return $query->where('status', self::STATUS_PENDING)
+        return $query->where('status', InvitationStatus::Pending)
             ->where('reminder_count', '<', $maxReminders)
             ->where('created_at', '<=', now()->subDays($afterDays))
             ->where(function (Builder $q): void {
@@ -346,8 +352,13 @@ final class Invitation extends Model
      */
     public function scopePastExpiration(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_PENDING)
-            ->where('expires_at', '!=', null)
+        return $query->where('status', InvitationStatus::Pending)
+            ->whereNotNull('expires_at')
             ->where('expires_at', '<=', now());
+    }
+
+    protected static function newFactory(): InvitationFactory
+    {
+        return InvitationFactory::new();
     }
 }

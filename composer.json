@@ -20,20 +20,23 @@
     }
   ],
   "require": {
-    "php": "^8.4",
-    "illuminate/support": "^11.0|^12.0",
-    "illuminate/database": "^11.0|^12.0"
+    "php": "^8.2",
+    "illuminate/database": "^11.0|^12.0",
+    "illuminate/support": "^11.0|^12.0"
   },
   "require-dev": {
+    "captainhook/captainhook-phar": "^5.27",
     "larastan/larastan": "^3.8.1",
     "laravel/pint": "^1.26.0",
     "orchestra/testbench": "^9.0|^10.8.0",
     "pestphp/pest": "^3.0|^4.0",
-    "pestphp/pest-plugin-laravel": "^3.0|^4.0"
+    "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+    "ramsey/conventional-commits": "^1.6"
   },
   "autoload": {
     "psr-4": {
-      "OffloadProject\\InviteOnly\\": "src/"
+      "OffloadProject\\InviteOnly\\": "src/",
+      "OffloadProject\\InviteOnly\\Database\\Factories\\": "database/factories/"
     }
   },
   "autoload-dev": {
@@ -60,6 +63,7 @@
   },
   "config": {
     "allow-plugins": {
+      "captainhook/captainhook-phar": true,
       "pestphp/pest-plugin": true
     },
     "sort-packages": true

@@ -7,6 +7,9 @@ namespace OffloadProject\InviteOnly;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use InvalidArgumentException;
+use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Events\InvitationAccepted;
 use OffloadProject\InviteOnly\Events\InvitationCancelled;
 use OffloadProject\InviteOnly\Events\InvitationCreated;
@@ -17,15 +20,19 @@ use OffloadProject\InviteOnly\Exceptions\InvitationAlreadyAcceptedException;
 use OffloadProject\InviteOnly\Exceptions\InvitationExpiredException;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InviteOnly
+final class InviteOnly implements InviteOnlyContract
 {
     /**
      * Create a new invitation.
      *
      * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int}  $options
+     *
+     * @throws InvalidArgumentException When email format is invalid
      */
     public function invite(string $email, ?Model $invitable = null, array $options = []): Invitation
     {
+        $this->validateEmail($email);
+
         $expiresAt = $options['expires_at'] ?? $this->getDefaultExpiration();
         $invitedBy = $options['invited_by'] ?? null;
 
@@ -42,20 +49,24 @@ final class InviteOnly
             'metadata' => $options['metadata'] ?? null,
             'invited_by' => $invitedBy,
             'expires_at' => $expiresAt,
-            'status' => Invitation::STATUS_PENDING,
+            'status' => InvitationStatus::Pending,
         ]);
 
         $invitation->markAsSent();
 
         event(new InvitationCreated($invitation));
 
-        $this->sendInvitationNotification($invitation);
+        $this->sendNotification('invitation', $invitation);
 
         return $invitation;
     }
 
     /**
      * Accept an invitation by token.
+     *
+     * @throws InvalidInvitationException When token is invalid, cancelled, or declined
+     * @throws InvitationAlreadyAcceptedException When invitation was already accepted
+     * @throws InvitationExpiredException When invitation has expired
      */
     public function accept(string $token, ?Model $user = null): Invitation
     {
@@ -85,13 +96,15 @@ final class InviteOnly
 
         event(new InvitationAccepted($invitation, $user));
 
-        $this->sendAcceptedNotification($invitation);
+        $this->sendAcceptedNotificationToInviter($invitation);
 
         return $invitation;
     }
 
     /**
      * Decline an invitation by token.
+     *
+     * @throws InvalidInvitationException When token is invalid or invitation is not pending
      */
     public function decline(string $token): Invitation
     {
@@ -114,6 +127,8 @@ final class InviteOnly
 
     /**
      * Cancel an invitation.
+     *
+     * @throws InvalidInvitationException When invitation is not pending or not found
      */
     public function cancel(Invitation|int $invitation, bool $notify = false): Invitation
     {
@@ -128,7 +143,7 @@ final class InviteOnly
         event(new InvitationCancelled($invitation));
 
         if ($notify) {
-            $this->sendCancelledNotification($invitation);
+            $this->sendNotification('cancelled', $invitation);
         }
 
         return $invitation;
@@ -136,6 +151,8 @@ final class InviteOnly
 
     /**
      * Resend an invitation notification.
+     *
+     * @throws InvalidInvitationException When invitation is not valid
      */
     public function resend(Invitation|int $invitation): Invitation
     {
@@ -147,7 +164,7 @@ final class InviteOnly
 
         $invitation->markAsSent();
 
-        $this->sendInvitationNotification($invitation);
+        $this->sendNotification('invitation', $invitation);
 
         return $invitation;
     }
@@ -182,7 +199,7 @@ final class InviteOnly
      */
     public function pending(?Model $invitable = null): Collection
     {
-        return $this->queryByStatus(Invitation::STATUS_PENDING, $invitable);
+        return $this->queryByStatus(InvitationStatus::Pending, $invitable);
     }
 
     /**
@@ -192,7 +209,7 @@ final class InviteOnly
      */
     public function accepted(?Model $invitable = null): Collection
     {
-        return $this->queryByStatus(Invitation::STATUS_ACCEPTED, $invitable);
+        return $this->queryByStatus(InvitationStatus::Accepted, $invitable);
     }
 
     /**
@@ -202,7 +219,7 @@ final class InviteOnly
      */
     public function declined(?Model $invitable = null): Collection
     {
-        return $this->queryByStatus(Invitation::STATUS_DECLINED, $invitable);
+        return $this->queryByStatus(InvitationStatus::Declined, $invitable);
     }
 
     /**
@@ -212,7 +229,7 @@ final class InviteOnly
      */
     public function expired(?Model $invitable = null): Collection
     {
-        return $this->queryByStatus(Invitation::STATUS_EXPIRED, $invitable);
+        return $this->queryByStatus(InvitationStatus::Expired, $invitable);
     }
 
     /**
@@ -222,18 +239,28 @@ final class InviteOnly
      */
     public function cancelled(?Model $invitable = null): Collection
     {
-        return $this->queryByStatus(Invitation::STATUS_CANCELLED, $invitable);
+        return $this->queryByStatus(InvitationStatus::Cancelled, $invitable);
     }
 
     /**
      * Mark all past-expiration pending invitations as expired.
+     *
+     * @return int Number of invitations marked as expired
      */
     public function markExpiredInvitations(): int
     {
         $expiredInvitations = Invitation::pastExpiration()->get();
 
+        if ($expiredInvitations->isEmpty()) {
+            return 0;
+        }
+
+        // Batch update for efficiency
+        Invitation::pastExpiration()->update(['status' => InvitationStatus::Expired]);
+
+        // Dispatch events for each invitation
         foreach ($expiredInvitations as $invitation) {
-            $invitation->markAsExpired();
+            $invitation->status = InvitationStatus::Expired;
             event(new InvitationExpired($invitation));
         }
 
@@ -242,6 +269,8 @@ final class InviteOnly
 
     /**
      * Send reminders for pending invitations.
+     *
+     * @return int Number of reminders sent
      */
     public function sendReminders(): int
     {
@@ -249,20 +278,23 @@ final class InviteOnly
             return 0;
         }
 
+        /** @var array<int, int> $afterDays */
         $afterDays = config('invite-only.reminders.after_days', [3, 5]);
+        $maxReminders = (int) config('invite-only.reminders.max_reminders', 2);
         $sent = 0;
 
-        foreach ($afterDays as $days) {
+        // Sort days to ensure we process in order
+        sort($afterDays);
+
+        foreach ($afterDays as $index => $days) {
             $invitations = Invitation::needsReminder($days)
-                ->where('reminder_count', '<', $days === min($afterDays) ? 1 : count($afterDays))
+                ->where('reminder_count', '=', $index)
                 ->get();
 
             foreach ($invitations as $invitation) {
-                if ($this->shouldSendReminder($invitation, $days)) {
-                    $this->sendReminderNotification($invitation);
-                    $invitation->incrementReminderCount();
-                    $sent++;
-                }
+                $this->sendNotification('reminder', $invitation);
+                $invitation->incrementReminderCount();
+                $sent++;
             }
         }
 
@@ -272,7 +304,7 @@ final class InviteOnly
     /**
      * @return Collection<int, Invitation>
      */
-    private function queryByStatus(string $status, ?Model $invitable = null): Collection
+    private function queryByStatus(InvitationStatus $status, ?Model $invitable = null): Collection
     {
         $query = Invitation::where('status', $status);
 
@@ -284,6 +316,9 @@ final class InviteOnly
         return $query->latest()->get();
     }
 
+    /**
+     * @throws InvalidInvitationException
+     */
     private function resolveInvitation(Invitation|int $invitation): Invitation
     {
         if ($invitation instanceof Invitation) {
@@ -305,21 +340,28 @@ final class InviteOnly
             return null;
         }
 
-        $days = config('invite-only.expiration.days', 7);
+        $days = (int) config('invite-only.expiration.days', 7);
 
         return now()->addDays($days);
     }
 
-    private function shouldSendReminder(Invitation $invitation, int $afterDays): bool
+    /**
+     * @throws InvalidArgumentException
+     */
+    private function validateEmail(string $email): void
     {
-        $createdDaysAgo = $invitation->created_at->diffInDays(now());
-
-        return $createdDaysAgo >= $afterDays;
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidArgumentException("Invalid email address: {$email}");
+        }
     }
 
-    private function sendInvitationNotification(Invitation $invitation): void
+    /**
+     * Send a notification using the configured notification class.
+     */
+    private function sendNotification(string $type, Invitation $invitation): void
     {
-        $notificationClass = config('invite-only.notifications.invitation');
+        /** @var class-string|null $notificationClass */
+        $notificationClass = config("invite-only.notifications.{$type}");
 
         if ($notificationClass === null) {
             return;
@@ -328,30 +370,12 @@ final class InviteOnly
         $invitation->notify(new $notificationClass($invitation));
     }
 
-    private function sendReminderNotification(Invitation $invitation): void
+    /**
+     * Send accepted notification to the inviter.
+     */
+    private function sendAcceptedNotificationToInviter(Invitation $invitation): void
     {
-        $notificationClass = config('invite-only.notifications.reminder');
-
-        if ($notificationClass === null) {
-            return;
-        }
-
-        $invitation->notify(new $notificationClass($invitation));
-    }
-
-    private function sendCancelledNotification(Invitation $invitation): void
-    {
-        $notificationClass = config('invite-only.notifications.cancelled');
-
-        if ($notificationClass === null) {
-            return;
-        }
-
-        $invitation->notify(new $notificationClass($invitation));
-    }
-
-    private function sendAcceptedNotification(Invitation $invitation): void
-    {
+        /** @var class-string|null $notificationClass */
         $notificationClass = config('invite-only.notifications.accepted');
 
         if ($notificationClass === null) {

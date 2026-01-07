@@ -19,23 +19,23 @@ final class InvitationController extends Controller
         $invitation = InviteOnly::find($token);
 
         if ($invitation === null) {
-            return $this->redirectWithError('Invalid invitation link.');
+            return $this->redirectWithStatus('error', 'Invalid invitation link.');
         }
 
         if ($invitation->isExpired()) {
-            return $this->redirectExpired('This invitation has expired.');
+            return $this->redirectWithStatus('expired', 'This invitation has expired.', 'expired');
         }
 
         if ($invitation->isAccepted()) {
-            return $this->redirectWithSuccess('This invitation has already been accepted.');
+            return $this->redirectWithStatus('success', 'This invitation has already been accepted.');
         }
 
         if ($invitation->isCancelled()) {
-            return $this->redirectWithError('This invitation has been cancelled.');
+            return $this->redirectWithStatus('error', 'This invitation has been cancelled.');
         }
 
         if ($invitation->isDeclined()) {
-            return $this->redirectWithError('This invitation has been declined.');
+            return $this->redirectWithStatus('error', 'This invitation has been declined.');
         }
 
         return redirect()->to($invitation->getAcceptUrl());
@@ -47,13 +47,13 @@ final class InvitationController extends Controller
             $user = $request->user();
             $invitation = InviteOnly::accept($token, $user);
 
-            return $this->redirectAccepted('You have successfully accepted the invitation.');
+            return $this->redirectWithStatus('accepted', 'You have successfully accepted the invitation.', 'accepted');
         } catch (InvalidInvitationException $e) {
-            return $this->redirectWithError($e->getMessage());
+            return $this->redirectWithStatus('error', $e->getMessage());
         } catch (InvitationAlreadyAcceptedException) {
-            return $this->redirectWithSuccess('This invitation has already been accepted.');
+            return $this->redirectWithStatus('success', 'This invitation has already been accepted.');
         } catch (InvitationExpiredException) {
-            return $this->redirectExpired('This invitation has expired.');
+            return $this->redirectWithStatus('expired', 'This invitation has expired.', 'expired');
         }
     }
 
@@ -62,54 +62,27 @@ final class InvitationController extends Controller
         try {
             InviteOnly::decline($token);
 
-            return $this->redirectDeclined('You have declined the invitation.');
+            return $this->redirectWithStatus('declined', 'You have declined the invitation.', 'declined');
         } catch (InvalidInvitationException $e) {
-            return $this->redirectWithError($e->getMessage());
+            return $this->redirectWithStatus('error', $e->getMessage());
         }
     }
 
-    private function redirectAccepted(string $message): RedirectResponse
+    /**
+     * Redirect with invitation status and message.
+     *
+     * @param  string  $status  The status key (accepted, declined, expired, error, success)
+     * @param  string  $message  The message to flash
+     * @param  string|null  $configKey  Optional config key for redirect URL (accepted, declined, expired, error)
+     */
+    private function redirectWithStatus(string $status, string $message, ?string $configKey = null): RedirectResponse
     {
-        $url = config('invite-only.redirect.accepted', '/');
+        $url = $configKey !== null
+            ? config("invite-only.redirect.{$configKey}", '/')
+            : '/';
 
         return redirect()->to($url)->with([
-            'invitation_status' => 'accepted',
-            'invitation_message' => $message,
-        ]);
-    }
-
-    private function redirectDeclined(string $message): RedirectResponse
-    {
-        $url = config('invite-only.redirect.declined', '/');
-
-        return redirect()->to($url)->with([
-            'invitation_status' => 'declined',
-            'invitation_message' => $message,
-        ]);
-    }
-
-    private function redirectExpired(string $message): RedirectResponse
-    {
-        $url = config('invite-only.redirect.expired', '/');
-
-        return redirect()->to($url)->with([
-            'invitation_status' => 'expired',
-            'invitation_message' => $message,
-        ]);
-    }
-
-    private function redirectWithError(string $message): RedirectResponse
-    {
-        return redirect()->to('/')->with([
-            'invitation_status' => 'error',
-            'invitation_message' => $message,
-        ]);
-    }
-
-    private function redirectWithSuccess(string $message): RedirectResponse
-    {
-        return redirect()->to('/')->with([
-            'invitation_status' => 'success',
+            'invitation_status' => $status,
             'invitation_message' => $message,
         ]);
     }

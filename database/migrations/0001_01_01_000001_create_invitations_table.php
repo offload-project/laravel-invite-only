@@ -10,7 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('invite-only.table', 'invitations'), function (Blueprint $table): void {
+        $tableName = config('invite-only.table', 'invitations');
+        $usersTable = config('invite-only.users_table', 'users');
+
+        Schema::create($tableName, function (Blueprint $table) use ($usersTable): void {
             $table->id();
             $table->nullableMorphs('invitable');
             $table->string('email');
@@ -18,8 +21,8 @@ return new class extends Migration
             $table->string('status')->default('pending');
             $table->string('role')->nullable();
             $table->json('metadata')->nullable();
-            $table->foreignId('invited_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('accepted_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('invited_by')->nullable()->constrained($usersTable)->nullOnDelete();
+            $table->foreignId('accepted_by')->nullable()->constrained($usersTable)->nullOnDelete();
             $table->timestamp('expires_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
             $table->timestamp('declined_at')->nullable();

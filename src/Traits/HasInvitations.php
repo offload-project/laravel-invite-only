@@ -7,6 +7,8 @@ namespace OffloadProject\InviteOnly\Traits;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Carbon;
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Facades\InviteOnly;
 use OffloadProject\InviteOnly\Models\Invitation;
 
@@ -30,7 +32,7 @@ trait HasInvitations
     /**
      * Create a new invitation for this model.
      *
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: \Illuminate\Support\Carbon, invited_by?: Model|int}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int}  $options
      */
     public function invite(string $email, array $options = []): Invitation
     {
@@ -114,21 +116,32 @@ trait HasInvitations
     }
 
     /**
-     * Get invitation statistics for this model.
+     * Get invitation statistics for this model using efficient database aggregation.
      *
      * @return array{total: int, pending: int, accepted: int, declined: int, expired: int, cancelled: int}
      */
     public function getInvitationStats(): array
     {
-        $invitations = $this->invitations()->get();
+        $stats = $this->invitations()
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Convert enum values to string keys if needed
+        $normalizedStats = [];
+        foreach ($stats as $status => $count) {
+            $key = $status instanceof InvitationStatus ? $status->value : $status;
+            $normalizedStats[$key] = (int) $count;
+        }
 
         return [
-            'total' => $invitations->count(),
-            'pending' => $invitations->where('status', Invitation::STATUS_PENDING)->count(),
-            'accepted' => $invitations->where('status', Invitation::STATUS_ACCEPTED)->count(),
-            'declined' => $invitations->where('status', Invitation::STATUS_DECLINED)->count(),
-            'expired' => $invitations->where('status', Invitation::STATUS_EXPIRED)->count(),
-            'cancelled' => $invitations->where('status', Invitation::STATUS_CANCELLED)->count(),
+            'total' => array_sum($normalizedStats),
+            'pending' => $normalizedStats[InvitationStatus::Pending->value] ?? 0,
+            'accepted' => $normalizedStats[InvitationStatus::Accepted->value] ?? 0,
+            'declined' => $normalizedStats[InvitationStatus::Declined->value] ?? 0,
+            'expired' => $normalizedStats[InvitationStatus::Expired->value] ?? 0,
+            'cancelled' => $normalizedStats[InvitationStatus::Cancelled->value] ?? 0,
         ];
     }
 }

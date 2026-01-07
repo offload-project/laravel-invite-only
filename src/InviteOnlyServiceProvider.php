@@ -7,6 +7,7 @@ namespace OffloadProject\InviteOnly;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use OffloadProject\InviteOnly\Console\SendInvitationRemindersCommand;
+use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
 use OffloadProject\InviteOnly\Http\Controllers\InvitationController;
 
 final class InviteOnlyServiceProvider extends ServiceProvider
@@ -15,7 +16,8 @@ final class InviteOnlyServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/invite-only.php', 'invite-only');
 
-        $this->app->singleton('invite-only', fn (): InviteOnly => new InviteOnly);
+        $this->app->singleton(InviteOnlyContract::class, InviteOnly::class);
+        $this->app->alias(InviteOnlyContract::class, 'invite-only');
     }
 
     public function boot(): void
@@ -42,11 +44,11 @@ final class InviteOnlyServiceProvider extends ServiceProvider
             ->middleware(config('invite-only.routes.middleware', ['web']))
             ->group(function (): void {
                 Route::get('{token}', [InvitationController::class, 'show'])
-                    ->name('invitations.show');
+                    ->name('invite-only.invitations.show');
                 Route::post('{token}/accept', [InvitationController::class, 'accept'])
-                    ->name('invitations.accept');
+                    ->name('invite-only.invitations.accept');
                 Route::post('{token}/decline', [InvitationController::class, 'decline'])
-                    ->name('invitations.decline');
+                    ->name('invite-only.invitations.decline');
             });
     }
 
