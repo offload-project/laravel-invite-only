@@ -7,6 +7,7 @@ namespace OffloadProject\InviteOnly\Facades;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Facade;
+use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
 use OffloadProject\InviteOnly\Models\Invitation;
 
 /**
@@ -26,11 +27,12 @@ use OffloadProject\InviteOnly\Models\Invitation;
  * @method static int sendReminders()
  *
  * @see \OffloadProject\InviteOnly\InviteOnly
+ * @see InviteOnlyContract
  */
 final class InviteOnly extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return 'invite-only';
+        return InviteOnlyContract::class;
     }
 }

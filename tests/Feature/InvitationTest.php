@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Events\InvitationAccepted;
 use OffloadProject\InviteOnly\Events\InvitationCancelled;
 use OffloadProject\InviteOnly\Events\InvitationCreated;
@@ -31,7 +32,7 @@ describe('creating invitations', function (): void {
         expect($invitation)
             ->toBeInstanceOf(Invitation::class)
             ->email->toBe('test@example.com')
-            ->status->toBe(Invitation::STATUS_PENDING)
+            ->status->toBe(InvitationStatus::Pending)
             ->token->toHaveLength(64)
             ->invitable_type->toBeNull()
             ->invitable_id->toBeNull();
@@ -95,6 +96,14 @@ describe('creating invitations', function (): void {
 
         expect($invitation->expires_at)->toBeNull();
     });
+
+    it('throws exception for invalid email format', function (): void {
+        InviteOnly::invite('invalid-email');
+    })->throws(InvalidArgumentException::class, 'Invalid email address');
+
+    it('throws exception for malformed email', function (): void {
+        InviteOnly::invite('test@');
+    })->throws(InvalidArgumentException::class, 'Invalid email address');
 });
 
 describe('accepting invitations', function (): void {
@@ -107,7 +116,7 @@ describe('accepting invitations', function (): void {
         $accepted = InviteOnly::accept($invitation->token, $user);
 
         expect($accepted)
-            ->status->toBe(Invitation::STATUS_ACCEPTED)
+            ->status->toBe(InvitationStatus::Accepted)
             ->accepted_by->toBe($user->id)
             ->accepted_at->not->toBeNull();
 
@@ -160,7 +169,7 @@ describe('declining invitations', function (): void {
         $declined = InviteOnly::decline($invitation->token);
 
         expect($declined)
-            ->status->toBe(Invitation::STATUS_DECLINED)
+            ->status->toBe(InvitationStatus::Declined)
             ->declined_at->not->toBeNull();
 
         Event::assertDispatched(InvitationDeclined::class);
@@ -187,7 +196,7 @@ describe('cancelling invitations', function (): void {
         $cancelled = InviteOnly::cancel($invitation);
 
         expect($cancelled)
-            ->status->toBe(Invitation::STATUS_CANCELLED)
+            ->status->toBe(InvitationStatus::Cancelled)
             ->cancelled_at->not->toBeNull();
 
         Event::assertDispatched(InvitationCancelled::class);
@@ -364,7 +373,7 @@ describe('CanBeInvited trait', function (): void {
 
         $accepted = $user->acceptInvitation($invitation->token);
 
-        expect($accepted->status)->toBe(Invitation::STATUS_ACCEPTED);
+        expect($accepted->status)->toBe(InvitationStatus::Accepted);
         expect($accepted->accepted_by)->toBe($user->id);
     });
 
@@ -408,5 +417,61 @@ describe('invitation model', function (): void {
         expect(Invitation::pending()->count())->toBe(1);
         expect(Invitation::accepted()->count())->toBe(1);
         expect(Invitation::valid()->count())->toBe(1);
+    });
+
+    it('uses enum for status', function (): void {
+        $invitation = InviteOnly::invite('test@example.com');
+
+        expect($invitation->status)->toBeInstanceOf(InvitationStatus::class);
+        expect($invitation->status)->toBe(InvitationStatus::Pending);
+    });
+});
+
+describe('invitation status enum', function (): void {
+    it('has correct status values', function (): void {
+        expect(InvitationStatus::Pending->value)->toBe('pending');
+        expect(InvitationStatus::Accepted->value)->toBe('accepted');
+        expect(InvitationStatus::Declined->value)->toBe('declined');
+        expect(InvitationStatus::Expired->value)->toBe('expired');
+        expect(InvitationStatus::Cancelled->value)->toBe('cancelled');
+    });
+
+    it('has helper methods', function (): void {
+        expect(InvitationStatus::Pending->isPending())->toBeTrue();
+        expect(InvitationStatus::Accepted->isAccepted())->toBeTrue();
+        expect(InvitationStatus::Declined->isDeclined())->toBeTrue();
+        expect(InvitationStatus::Expired->isExpired())->toBeTrue();
+        expect(InvitationStatus::Cancelled->isCancelled())->toBeTrue();
+    });
+
+    it('identifies terminal statuses', function (): void {
+        expect(InvitationStatus::Pending->isTerminal())->toBeFalse();
+        expect(InvitationStatus::Accepted->isTerminal())->toBeTrue();
+        expect(InvitationStatus::Declined->isTerminal())->toBeTrue();
+        expect(InvitationStatus::Expired->isTerminal())->toBeTrue();
+        expect(InvitationStatus::Cancelled->isTerminal())->toBeTrue();
+    });
+});
+
+describe('batch expired invitations', function (): void {
+    it('marks expired invitations in batch', function (): void {
+        // Create some expired invitations
+        $invitation1 = InviteOnly::invite('expired1@example.com');
+        $invitation1->update(['expires_at' => now()->subDay()]);
+
+        $invitation2 = InviteOnly::invite('expired2@example.com');
+        $invitation2->update(['expires_at' => now()->subDay()]);
+
+        // Create a valid invitation that should not be affected
+        $validInvitation = InviteOnly::invite('valid@example.com');
+
+        Event::fake();
+
+        $count = InviteOnly::markExpiredInvitations();
+
+        expect($count)->toBe(2);
+        expect($invitation1->fresh()->status)->toBe(InvitationStatus::Expired);
+        expect($invitation2->fresh()->status)->toBe(InvitationStatus::Expired);
+        expect($validInvitation->fresh()->status)->toBe(InvitationStatus::Pending);
     });
 });

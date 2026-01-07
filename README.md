@@ -19,10 +19,12 @@ and event-driven notifications.
 - **Cancel with notification** - Cancel invitations with optional email notification
 - **Event-driven** - Events fired for all invitation lifecycle changes
 - **Configurable** - Customize expiration, reminders, notifications, and routes
+- **Type-safe status enum** - PHP 8.4 backed enum for invitation statuses
+- **Model factory** - Included factory for easy testing
 
 ## Requirements
 
-- PHP 8.4+
+- PHP 8.1+
 - Laravel 11.0 or 12.0
 
 ## Installation
@@ -51,6 +53,9 @@ return [
     // User model for relationships
     'user_model' => App\Models\User::class,
 
+    // Users table name (for foreign key constraints)
+    'users_table' => 'users',
+
     // Invitation expiration
     'expiration' => [
         'enabled' => true,
@@ -64,7 +69,7 @@ return [
         'max_reminders' => 2,
     ],
 
-    // Custom notification classes
+    // Custom notification classes (set to null to disable)
     'notifications' => [
         'invitation' => InvitationSent::class,
         'reminder' => InvitationReminder::class,
@@ -72,11 +77,11 @@ return [
         'accepted' => InvitationAcceptedNotification::class,
     ],
 
-    // Route settings
+    // Route settings (includes rate limiting by default)
     'routes' => [
         'enabled' => true,
         'prefix' => 'invitations',
-        'middleware' => ['web'],
+        'middleware' => ['web', 'throttle:60,1'],
     ],
 
     // Redirect URLs after actions
@@ -84,6 +89,7 @@ return [
         'accepted' => '/',
         'declined' => '/',
         'expired' => '/',
+        'error' => '/',
     ],
 ];
 ```
@@ -126,6 +132,8 @@ $pending = InviteOnly::pending($team);
 $accepted = InviteOnly::accepted($team);
 $expired = InviteOnly::expired();
 ```
+
+> **Note:** Invalid email addresses will throw an `InvalidArgumentException`.
 
 ### Using Traits
 
@@ -276,11 +284,11 @@ Set a notification to `null` to disable it:
 
 The package registers the following routes by default:
 
-| Method | URI                            | Name                  | Description              |
-|--------|--------------------------------|-----------------------|--------------------------|
-| GET    | `/invitations/{token}`         | `invitations.show`    | View/redirect invitation |
-| POST   | `/invitations/{token}/accept`  | `invitations.accept`  | Accept invitation        |
-| POST   | `/invitations/{token}/decline` | `invitations.decline` | Decline invitation       |
+| Method | URI                            | Name                              | Description              |
+|--------|--------------------------------|-----------------------------------|--------------------------|
+| GET    | `/invitations/{token}`         | `invite-only.invitations.show`    | View/redirect invitation |
+| POST   | `/invitations/{token}/accept`  | `invite-only.invitations.accept`  | Accept invitation        |
+| POST   | `/invitations/{token}/decline` | `invite-only.invitations.decline` | Decline invitation       |
 
 You can disable automatic route registration and define your own:
 
@@ -296,6 +304,8 @@ You can disable automatic route registration and define your own:
 The `Invitation` model provides many helpful methods:
 
 ```php
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
+
 // Status checks
 $invitation->isPending();
 $invitation->isAccepted();
@@ -303,6 +313,11 @@ $invitation->isDeclined();
 $invitation->isExpired();
 $invitation->isCancelled();
 $invitation->isValid();  // pending AND not expired
+
+// Access status enum directly
+$invitation->status; // InvitationStatus::Pending
+$invitation->status->label(); // "Pending"
+$invitation->status->isTerminal(); // false (true for accepted, declined, expired, cancelled)
 
 // Get URLs
 $invitation->getAcceptUrl();
@@ -321,7 +336,68 @@ Invitation::forEmail('user@example.com')->get();
 Invitation::forInvitable($team)->get();
 ```
 
+### Invitation Status Enum
+
+The package uses a PHP 8.4 backed enum for type-safe status handling:
+
+```php
+use OffloadProject\InviteOnly\Enums\InvitationStatus;
+
+// Available statuses
+InvitationStatus::Pending;
+InvitationStatus::Accepted;
+InvitationStatus::Declined;
+InvitationStatus::Expired;
+InvitationStatus::Cancelled;
+
+// Helper methods
+$status->isPending();    // bool
+$status->isAccepted();   // bool
+$status->isTerminal();   // true if accepted, declined, expired, or cancelled
+$status->label();        // "Pending", "Accepted", etc.
+$status->value;          // "pending", "accepted", etc.
+```
+
+## Custom Implementation
+
+The package binds to an interface, allowing you to swap the implementation:
+
+```php
+use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
+
+// In a service provider
+$this->app->singleton(InviteOnlyContract::class, YourCustomInviteOnly::class);
+```
+
 ## Testing
+
+The package includes a model factory for easy testing:
+
+```php
+use OffloadProject\InviteOnly\Models\Invitation;
+
+// Create a pending invitation
+$invitation = Invitation::factory()->create();
+
+// Create with specific states
+$invitation = Invitation::factory()->accepted()->create();
+$invitation = Invitation::factory()->declined()->create();
+$invitation = Invitation::factory()->expired()->create();
+$invitation = Invitation::factory()->cancelled()->create();
+
+// With specific attributes
+$invitation = Invitation::factory()
+    ->withRole('admin')
+    ->withMetadata(['source' => 'referral'])
+    ->invitedBy($user->id)
+    ->expiresInDays(14)
+    ->create();
+
+// Invitation that needs a reminder
+$invitation = Invitation::factory()->needsReminder(3)->create();
+```
+
+Run the test suite:
 
 ```bash
 composer test
