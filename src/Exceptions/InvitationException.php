@@ -52,6 +52,6 @@ abstract class InvitationException extends Exception
      */
     final public function getDocumentationUrl(): string
     {
-        return "https://github.com/offload-project/laravel-invite-only#troubleshooting-{$this->errorCode}";
+        return 'https://github.com/offload-project/laravel-invite-only/blob/main/docs/howto/handling-errors.md';
     }
 }
