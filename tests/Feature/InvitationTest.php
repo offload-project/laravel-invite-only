@@ -723,4 +723,14 @@ describe('bulk invitations', function (): void {
         expect($result->total())->toBe(0);
         expect($result->allSuccessful())->toBeTrue();
     });
+
+    it('hasSuccesses returns correct value', function (): void {
+        // With successes
+        $result = InviteOnly::inviteMany(['valid@example.com']);
+        expect($result->hasSuccesses())->toBeTrue();
+
+        // Without successes (all invalid)
+        $result = InviteOnly::inviteMany(['invalid', 'also-invalid']);
+        expect($result->hasSuccesses())->toBeFalse();
+    });
 });
