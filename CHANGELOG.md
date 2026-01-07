@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/offload-project/laravel-invite-only/compare/v2.0.0...v2.1.0) (2026-01-07)
+
+
+### Features
+
+* bulk invites, numerous other improvements and fixes ([#5](https://github.com/offload-project/laravel-invite-only/issues/5)) ([33ae178](https://github.com/offload-project/laravel-invite-only/commit/33ae1786d39daa1ed223018565b41b1b61e43ccd))
+
 ## [2.0.0](https://github.com/offload-project/laravel-invite-only/compare/v1.0.0...v2.0.0) (2026-01-07)
 
 ### Features
