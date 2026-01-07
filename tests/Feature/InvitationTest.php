@@ -9,6 +9,7 @@ use OffloadProject\InviteOnly\Events\InvitationAccepted;
 use OffloadProject\InviteOnly\Events\InvitationCancelled;
 use OffloadProject\InviteOnly\Events\InvitationCreated;
 use OffloadProject\InviteOnly\Events\InvitationDeclined;
+use OffloadProject\InviteOnly\Events\InvitationExpired;
 use OffloadProject\InviteOnly\Exceptions\InvalidInvitationException;
 use OffloadProject\InviteOnly\Exceptions\InvitationAlreadyAcceptedException;
 use OffloadProject\InviteOnly\Exceptions\InvitationExpiredException;
@@ -16,6 +17,7 @@ use OffloadProject\InviteOnly\Facades\InviteOnly;
 use OffloadProject\InviteOnly\Models\Invitation;
 use OffloadProject\InviteOnly\Notifications\InvitationAcceptedNotification;
 use OffloadProject\InviteOnly\Notifications\InvitationCancelledNotification;
+use OffloadProject\InviteOnly\Notifications\InvitationReminder;
 use OffloadProject\InviteOnly\Notifications\InvitationSent;
 use OffloadProject\InviteOnly\Tests\TestTeam;
 use OffloadProject\InviteOnly\Tests\TestUser;
@@ -473,5 +475,138 @@ describe('batch expired invitations', function (): void {
         expect($invitation1->fresh()->status)->toBe(InvitationStatus::Expired);
         expect($invitation2->fresh()->status)->toBe(InvitationStatus::Expired);
         expect($validInvitation->fresh()->status)->toBe(InvitationStatus::Pending);
+
+        Event::assertDispatchedTimes(InvitationExpired::class, 2);
+    });
+});
+
+describe('sending reminders', function (): void {
+    it('sends reminders for invitations that need them', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+        config(['invite-only.reminders.max_reminders' => 2]);
+
+        // Create an invitation that's 3+ days old
+        $invitation = Invitation::factory()->needsReminder(3)->create();
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        expect($count)->toBe(1);
+        expect($invitation->fresh()->reminder_count)->toBe(1);
+        Notification::assertSentTo($invitation, InvitationReminder::class);
+    });
+
+    it('does not send reminders when disabled', function (): void {
+        config(['invite-only.reminders.enabled' => false]);
+
+        $invitation = Invitation::factory()->needsReminder(3)->create();
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        expect($count)->toBe(0);
+        expect($invitation->fresh()->reminder_count)->toBe(0);
+        Notification::assertNotSentTo($invitation, InvitationReminder::class);
+    });
+
+    it('respects max reminders limit', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+        config(['invite-only.reminders.max_reminders' => 2]);
+
+        // Create an invitation that already has max reminders
+        $invitation = Invitation::factory()->create([
+            'created_at' => now()->subDays(10),
+            'reminder_count' => 2,
+        ]);
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        expect($count)->toBe(0);
+        Notification::assertNotSentTo($invitation, InvitationReminder::class);
+    });
+
+    it('catches up on missed reminders over multiple runs', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+        config(['invite-only.reminders.max_reminders' => 2]);
+
+        // Create an invitation that's 6 days old but has no reminders yet
+        $invitation = Invitation::factory()->create([
+            'created_at' => now()->subDays(6),
+            'reminder_count' => 0,
+        ]);
+
+        Notification::fake();
+
+        // First run should catch it at day 3 threshold
+        $count = InviteOnly::sendReminders();
+        expect($count)->toBe(1);
+        expect($invitation->fresh()->reminder_count)->toBe(1);
+
+        // Second run should catch it at day 5 threshold
+        $count = InviteOnly::sendReminders();
+        expect($count)->toBe(1);
+        expect($invitation->fresh()->reminder_count)->toBe(2);
+    });
+
+    it('only sends one reminder per invitation per run', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+        config(['invite-only.reminders.max_reminders' => 2]);
+
+        // Create an invitation that qualifies for multiple reminder thresholds
+        $invitation = Invitation::factory()->create([
+            'created_at' => now()->subDays(10),
+            'reminder_count' => 0,
+        ]);
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        // Should only send one reminder even though it qualifies for both thresholds
+        expect($count)->toBe(1);
+        expect($invitation->fresh()->reminder_count)->toBe(1);
+    });
+
+    it('does not send reminders to expired invitations', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+
+        $invitation = Invitation::factory()->create([
+            'created_at' => now()->subDays(4),
+            'expires_at' => now()->subDay(),
+            'reminder_count' => 0,
+        ]);
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        expect($count)->toBe(0);
+        Notification::assertNotSentTo($invitation, InvitationReminder::class);
+    });
+
+    it('does not send reminders to non-pending invitations', function (): void {
+        config(['invite-only.reminders.enabled' => true]);
+        config(['invite-only.reminders.after_days' => [3, 5]]);
+
+        $invitation = Invitation::factory()->accepted()->create([
+            'created_at' => now()->subDays(4),
+            'reminder_count' => 0,
+        ]);
+
+        Notification::fake();
+
+        $count = InviteOnly::sendReminders();
+
+        expect($count)->toBe(0);
+        Notification::assertNotSentTo($invitation, InvitationReminder::class);
     });
 });

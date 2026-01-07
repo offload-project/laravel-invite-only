@@ -73,13 +73,12 @@ final class InvitationController extends Controller
      *
      * @param  string  $status  The status key (accepted, declined, expired, error, success)
      * @param  string  $message  The message to flash
-     * @param  string|null  $configKey  Optional config key for redirect URL (accepted, declined, expired, error)
+     * @param  string|null  $configKey  Optional config key for redirect URL, defaults to status
      */
     private function redirectWithStatus(string $status, string $message, ?string $configKey = null): RedirectResponse
     {
-        $url = $configKey !== null
-            ? config("invite-only.redirect.{$configKey}", '/')
-            : '/';
+        $configKey ??= $status;
+        $url = config("invite-only.redirect.{$configKey}", '/');
 
         return redirect()->to($url)->with([
             'invitation_status' => $status,

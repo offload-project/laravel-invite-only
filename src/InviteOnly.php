@@ -73,7 +73,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->find($token);
 
         if ($invitation === null) {
-            throw new InvalidInvitationException('Invalid invitation token.');
+            throw InvalidInvitationException::tokenNotFound();
         }
 
         if ($invitation->isAccepted()) {
@@ -85,11 +85,11 @@ final class InviteOnly implements InviteOnlyContract
         }
 
         if ($invitation->isCancelled()) {
-            throw new InvalidInvitationException('This invitation has been cancelled.');
+            throw InvalidInvitationException::alreadyCancelled($invitation);
         }
 
         if ($invitation->isDeclined()) {
-            throw new InvalidInvitationException('This invitation has been declined.');
+            throw InvalidInvitationException::alreadyDeclined($invitation);
         }
 
         $invitation->markAsAccepted($user);
@@ -111,11 +111,11 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->find($token);
 
         if ($invitation === null) {
-            throw new InvalidInvitationException('Invalid invitation token.');
+            throw InvalidInvitationException::tokenNotFound();
         }
 
         if (! $invitation->isPending()) {
-            throw new InvalidInvitationException('This invitation cannot be declined.');
+            throw InvalidInvitationException::cannotDecline($invitation);
         }
 
         $invitation->markAsDeclined();
@@ -135,7 +135,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->resolveInvitation($invitation);
 
         if (! $invitation->isPending()) {
-            throw new InvalidInvitationException('Only pending invitations can be cancelled.');
+            throw InvalidInvitationException::cannotCancel($invitation);
         }
 
         $invitation->markAsCancelled();
@@ -159,7 +159,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->resolveInvitation($invitation);
 
         if (! $invitation->isValid()) {
-            throw new InvalidInvitationException('This invitation cannot be resent.');
+            throw InvalidInvitationException::cannotResend($invitation);
         }
 
         $invitation->markAsSent();
@@ -258,9 +258,9 @@ final class InviteOnly implements InviteOnlyContract
         // Batch update for efficiency
         Invitation::pastExpiration()->update(['status' => InvitationStatus::Expired]);
 
-        // Dispatch events for each invitation
+        // Refresh models and dispatch events for each invitation
         foreach ($expiredInvitations as $invitation) {
-            $invitation->status = InvitationStatus::Expired;
+            $invitation->refresh();
             event(new InvitationExpired($invitation));
         }
 
@@ -269,6 +269,10 @@ final class InviteOnly implements InviteOnlyContract
 
     /**
      * Send reminders for pending invitations.
+     *
+     * Reminders are sent based on configured day thresholds. If a reminder was
+     * missed (e.g., scheduler didn't run), the invitation will catch up on the
+     * next run but only receive one reminder per run to avoid spam.
      *
      * @return int Number of reminders sent
      */
@@ -280,20 +284,28 @@ final class InviteOnly implements InviteOnlyContract
 
         /** @var array<int, int> $afterDays */
         $afterDays = config('invite-only.reminders.after_days', [3, 5]);
-        $maxReminders = (int) config('invite-only.reminders.max_reminders', 2);
         $sent = 0;
 
         // Sort days to ensure we process in order
         sort($afterDays);
 
+        // Track processed invitations to avoid sending multiple reminders in one run
+        $processedIds = [];
+
         foreach ($afterDays as $index => $days) {
-            $invitations = Invitation::needsReminder($days)
-                ->where('reminder_count', '=', $index)
-                ->get();
+            $query = Invitation::needsReminder($days)
+                ->where('reminder_count', '<=', $index);
+
+            if (! empty($processedIds)) {
+                $query->whereNotIn('id', $processedIds);
+            }
+
+            $invitations = $query->get();
 
             foreach ($invitations as $invitation) {
                 $this->sendNotification('reminder', $invitation);
                 $invitation->incrementReminderCount();
+                $processedIds[] = $invitation->id;
                 $sent++;
             }
         }
@@ -328,7 +340,7 @@ final class InviteOnly implements InviteOnlyContract
         $resolved = Invitation::find($invitation);
 
         if ($resolved === null) {
-            throw new InvalidInvitationException('Invitation not found.');
+            throw InvalidInvitationException::notFound();
         }
 
         return $resolved;
@@ -351,7 +363,7 @@ final class InviteOnly implements InviteOnlyContract
     private function validateEmail(string $email): void
     {
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new InvalidArgumentException("Invalid email address: {$email}");
+            throw new InvalidArgumentException('Invalid email address');
         }
     }
 
