@@ -83,7 +83,17 @@ final class Invitation extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     /** @var list<string> */
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'email',
+        'token',
+        'invitable_type',
+        'invitable_id',
+        'role',
+        'metadata',
+        'invited_by',
+        'expires_at',
+        'status',
+    ];
 
     /** @var array<string, string> */
     protected $casts = [

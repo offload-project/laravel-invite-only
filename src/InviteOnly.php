@@ -7,6 +7,7 @@ namespace OffloadProject\InviteOnly;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as BaseCollection;
 use InvalidArgumentException;
 use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
 use OffloadProject\InviteOnly\Enums\InvitationStatus;
@@ -62,6 +63,53 @@ final class InviteOnly implements InviteOnlyContract
     }
 
     /**
+     * Create multiple invitations at once.
+     *
+     * Invalid emails and duplicates are captured in the result's failed collection
+     * rather than throwing exceptions, allowing partial success.
+     *
+     * @param  array<int, string>  $emails
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     */
+    public function inviteMany(array $emails, ?Model $invitable = null, array $options = []): BulkInvitationResult
+    {
+        $skipDuplicates = $options['skip_duplicates'] ?? true;
+        unset($options['skip_duplicates']);
+
+        $successful = new BaseCollection;
+        $failed = new BaseCollection;
+
+        // Get existing pending invitation emails for this invitable to check duplicates
+        $existingEmails = $skipDuplicates
+            ? $this->getExistingPendingEmails($emails, $invitable)
+            : [];
+
+        foreach ($emails as $email) {
+            // Check for duplicates
+            if (in_array($email, $existingEmails, true)) {
+                $failed->push([
+                    'email' => $email,
+                    'reason' => 'Pending invitation already exists',
+                ]);
+
+                continue;
+            }
+
+            try {
+                $invitation = $this->invite($email, $invitable, $options);
+                $successful->push($invitation);
+            } catch (InvalidArgumentException) {
+                $failed->push([
+                    'email' => $email,
+                    'reason' => 'Invalid email format',
+                ]);
+            }
+        }
+
+        return new BulkInvitationResult($successful, $failed);
+    }
+
+    /**
      * Accept an invitation by token.
      *
      * @throws InvalidInvitationException When token is invalid, cancelled, or declined
@@ -73,7 +121,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->find($token);
 
         if ($invitation === null) {
-            throw new InvalidInvitationException('Invalid invitation token.');
+            throw InvalidInvitationException::tokenNotFound();
         }
 
         if ($invitation->isAccepted()) {
@@ -85,11 +133,11 @@ final class InviteOnly implements InviteOnlyContract
         }
 
         if ($invitation->isCancelled()) {
-            throw new InvalidInvitationException('This invitation has been cancelled.');
+            throw InvalidInvitationException::alreadyCancelled($invitation);
         }
 
         if ($invitation->isDeclined()) {
-            throw new InvalidInvitationException('This invitation has been declined.');
+            throw InvalidInvitationException::alreadyDeclined($invitation);
         }
 
         $invitation->markAsAccepted($user);
@@ -111,11 +159,11 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->find($token);
 
         if ($invitation === null) {
-            throw new InvalidInvitationException('Invalid invitation token.');
+            throw InvalidInvitationException::tokenNotFound();
         }
 
         if (! $invitation->isPending()) {
-            throw new InvalidInvitationException('This invitation cannot be declined.');
+            throw InvalidInvitationException::cannotDecline($invitation);
         }
 
         $invitation->markAsDeclined();
@@ -135,7 +183,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->resolveInvitation($invitation);
 
         if (! $invitation->isPending()) {
-            throw new InvalidInvitationException('Only pending invitations can be cancelled.');
+            throw InvalidInvitationException::cannotCancel($invitation);
         }
 
         $invitation->markAsCancelled();
@@ -159,7 +207,7 @@ final class InviteOnly implements InviteOnlyContract
         $invitation = $this->resolveInvitation($invitation);
 
         if (! $invitation->isValid()) {
-            throw new InvalidInvitationException('This invitation cannot be resent.');
+            throw InvalidInvitationException::cannotResend($invitation);
         }
 
         $invitation->markAsSent();
@@ -258,9 +306,9 @@ final class InviteOnly implements InviteOnlyContract
         // Batch update for efficiency
         Invitation::pastExpiration()->update(['status' => InvitationStatus::Expired]);
 
-        // Dispatch events for each invitation
+        // Refresh models and dispatch events for each invitation
         foreach ($expiredInvitations as $invitation) {
-            $invitation->status = InvitationStatus::Expired;
+            $invitation->refresh();
             event(new InvitationExpired($invitation));
         }
 
@@ -269,6 +317,10 @@ final class InviteOnly implements InviteOnlyContract
 
     /**
      * Send reminders for pending invitations.
+     *
+     * Reminders are sent based on configured day thresholds. If a reminder was
+     * missed (e.g., scheduler didn't run), the invitation will catch up on the
+     * next run but only receive one reminder per run to avoid spam.
      *
      * @return int Number of reminders sent
      */
@@ -280,25 +332,54 @@ final class InviteOnly implements InviteOnlyContract
 
         /** @var array<int, int> $afterDays */
         $afterDays = config('invite-only.reminders.after_days', [3, 5]);
-        $maxReminders = (int) config('invite-only.reminders.max_reminders', 2);
         $sent = 0;
 
         // Sort days to ensure we process in order
         sort($afterDays);
 
+        // Track processed invitations to avoid sending multiple reminders in one run
+        $processedIds = [];
+
         foreach ($afterDays as $index => $days) {
-            $invitations = Invitation::needsReminder($days)
-                ->where('reminder_count', '=', $index)
-                ->get();
+            $query = Invitation::needsReminder($days)
+                ->where('reminder_count', '<=', $index);
+
+            if (! empty($processedIds)) {
+                $query->whereNotIn('id', $processedIds);
+            }
+
+            $invitations = $query->get();
 
             foreach ($invitations as $invitation) {
                 $this->sendNotification('reminder', $invitation);
                 $invitation->incrementReminderCount();
+                $processedIds[] = $invitation->id;
                 $sent++;
             }
         }
 
         return $sent;
+    }
+
+    /**
+     * Get emails that already have pending invitations.
+     *
+     * @param  array<int, string>  $emails
+     * @return array<int, string>
+     */
+    private function getExistingPendingEmails(array $emails, ?Model $invitable): array
+    {
+        $query = Invitation::whereIn('email', $emails)
+            ->where('status', InvitationStatus::Pending);
+
+        if ($invitable !== null) {
+            $query->where('invitable_type', $invitable->getMorphClass())
+                ->where('invitable_id', $invitable->getKey());
+        } else {
+            $query->whereNull('invitable_type');
+        }
+
+        return $query->pluck('email')->all();
     }
 
     /**
@@ -328,7 +409,7 @@ final class InviteOnly implements InviteOnlyContract
         $resolved = Invitation::find($invitation);
 
         if ($resolved === null) {
-            throw new InvalidInvitationException('Invitation not found.');
+            throw InvalidInvitationException::notFound();
         }
 
         return $resolved;
@@ -351,7 +432,7 @@ final class InviteOnly implements InviteOnlyContract
     private function validateEmail(string $email): void
     {
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new InvalidArgumentException("Invalid email address: {$email}");
+            throw new InvalidArgumentException('Invalid email address');
         }
     }
 
