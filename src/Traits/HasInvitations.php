@@ -122,26 +122,20 @@ trait HasInvitations
      */
     public function getInvitationStats(): array
     {
+        /** @var array<string, int> $stats */
         $stats = $this->invitations()
             ->selectRaw('status, COUNT(*) as count')
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
 
-        // Convert enum values to string keys if needed
-        $normalizedStats = [];
-        foreach ($stats as $status => $count) {
-            $key = $status instanceof InvitationStatus ? $status->value : $status;
-            $normalizedStats[$key] = (int) $count;
-        }
-
         return [
-            'total' => array_sum($normalizedStats),
-            'pending' => $normalizedStats[InvitationStatus::Pending->value] ?? 0,
-            'accepted' => $normalizedStats[InvitationStatus::Accepted->value] ?? 0,
-            'declined' => $normalizedStats[InvitationStatus::Declined->value] ?? 0,
-            'expired' => $normalizedStats[InvitationStatus::Expired->value] ?? 0,
-            'cancelled' => $normalizedStats[InvitationStatus::Cancelled->value] ?? 0,
+            'total' => array_sum($stats),
+            'pending' => $stats[InvitationStatus::Pending->value] ?? 0,
+            'accepted' => $stats[InvitationStatus::Accepted->value] ?? 0,
+            'declined' => $stats[InvitationStatus::Declined->value] ?? 0,
+            'expired' => $stats[InvitationStatus::Expired->value] ?? 0,
+            'cancelled' => $stats[InvitationStatus::Cancelled->value] ?? 0,
         ];
     }
 }
