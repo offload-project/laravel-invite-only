@@ -85,16 +85,6 @@ final class InviteOnly implements InviteOnlyContract
             : [];
 
         foreach ($emails as $email) {
-            // Validate email format
-            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $failed->push([
-                    'email' => $email,
-                    'reason' => 'Invalid email format',
-                ]);
-
-                continue;
-            }
-
             // Check for duplicates
             if (in_array($email, $existingEmails, true)) {
                 $failed->push([
@@ -108,10 +98,10 @@ final class InviteOnly implements InviteOnlyContract
             try {
                 $invitation = $this->invite($email, $invitable, $options);
                 $successful->push($invitation);
-            } catch (InvalidArgumentException $e) {
+            } catch (InvalidArgumentException) {
                 $failed->push([
                     'email' => $email,
-                    'reason' => $e->getMessage(),
+                    'reason' => 'Invalid email format',
                 ]);
             }
         }
