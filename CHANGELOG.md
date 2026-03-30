@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/offload-project/laravel-invite-only/compare/v2.1.0...v2.2.0) (2026-03-30)
+
+
+### Features
+
+* add Laravel 13 support ([f6259e9](https://github.com/offload-project/laravel-invite-only/commit/f6259e9f4a4964878dccd4b64646e1554fe88816))
+
 ## [2.1.0](https://github.com/offload-project/laravel-invite-only/compare/v2.0.0...v2.1.0) (2026-01-07)
 
 
