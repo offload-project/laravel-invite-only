@@ -10,15 +10,13 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-class InvitationCancelledNotification extends Notification implements ShouldQueue
+final class InvitationCancelledNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
         public readonly Invitation $invitation
-    )
-    {
-    }
+    ) {}
 
     /**
      * @return list<string>
