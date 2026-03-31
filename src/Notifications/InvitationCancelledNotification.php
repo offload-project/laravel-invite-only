@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InvitationCancelledNotification extends Notification implements ShouldQueue
+class InvitationCancelledNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
