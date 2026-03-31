@@ -10,13 +10,15 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InvitationCancelledNotification extends Notification implements ShouldQueue
+class InvitationCancelledNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
         public readonly Invitation $invitation
-    ) {}
+    )
+    {
+    }
 
     /**
      * @return list<string>
@@ -31,17 +33,16 @@ final class InvitationCancelledNotification extends Notification implements Shou
         $invitableName = $this->getInvitableName();
 
         $message = (new MailMessage)
-            ->subject('Invitation Cancelled')
-            ->greeting('Hello!');
+            ->subject(__('invite-only::notifications.cancelled.subject'))
+            ->greeting(__('invite-only::notifications.cancelled.greeting'));
 
         if ($invitableName !== null) {
-            $message->line("Your invitation to join {$invitableName} has been cancelled.");
+            $message->line(__('invite-only::notifications.cancelled.line_with_name', ['name' => $invitableName]));
         } else {
-            $message->line('Your invitation has been cancelled.');
+            $message->line(__('invite-only::notifications.cancelled.line_without_name'));
         }
 
-        return $message
-            ->line('If you believe this was a mistake, please contact the person who sent you the invitation.');
+        return $message->line(__('invite-only::notifications.cancelled.footer'));
     }
 
     /**
@@ -55,7 +56,7 @@ final class InvitationCancelledNotification extends Notification implements Shou
         ];
     }
 
-    private function getInvitableName(): ?string
+    protected function getInvitableName(): ?string
     {
         $invitable = $this->invitation->invitable;
 

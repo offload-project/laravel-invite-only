@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InvitationSent extends Notification implements ShouldQueue
+class InvitationSent extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -31,19 +31,19 @@ final class InvitationSent extends Notification implements ShouldQueue
         $invitableName = $this->getInvitableName();
 
         $message = (new MailMessage)
-            ->subject("You've Been Invited!")
-            ->greeting('Hello!');
+            ->subject(__('invite-only::notifications.invitation.subject'))
+            ->greeting(__('invite-only::notifications.invitation.greeting'));
 
         if ($invitableName !== null) {
-            $message->line("You have been invited to join {$invitableName}.");
+            $message->line(__('invite-only::notifications.invitation.line_with_name', ['name' => $invitableName]));
         } else {
-            $message->line('You have been invited to join us.');
+            $message->line(__('invite-only::notifications.invitation.line_without_name'));
         }
 
         return $message
-            ->line('Click the button below to accept your invitation.')
-            ->action('Accept Invitation', $this->invitation->getAcceptUrl())
-            ->line('If you did not expect this invitation, you can ignore this email.');
+            ->line(__('invite-only::notifications.invitation.action_line'))
+            ->action(__('invite-only::notifications.invitation.action_text'), $this->invitation->getAcceptUrl())
+            ->line(__('invite-only::notifications.invitation.footer'));
     }
 
     /**
@@ -57,7 +57,7 @@ final class InvitationSent extends Notification implements ShouldQueue
         ];
     }
 
-    private function getInvitableName(): ?string
+    protected function getInvitableName(): ?string
     {
         $invitable = $this->invitation->invitable;
 
