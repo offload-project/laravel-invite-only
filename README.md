@@ -6,7 +6,8 @@
 
 # Laravel Invite Only
 
-A Laravel package for managing user invitations with polymorphic relationships, token-based access, scheduled reminders, and event-driven notifications.
+A Laravel package for managing user invitations with polymorphic relationships, token-based access, scheduled reminders,
+and event-driven notifications.
 
 ## Features
 
@@ -20,8 +21,8 @@ A Laravel package for managing user invitations with polymorphic relationships, 
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 11.0 or 12.0
+- PHP 8.3+
+- Laravel 11/12/13
 
 ## Installation
 
