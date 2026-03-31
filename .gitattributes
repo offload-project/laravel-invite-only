@@ -8,3 +8,8 @@
 /phpunit.xml        export-ignore
 /tests              export-ignore
 /.editorconfig      export-ignore
+/phpstan.neon       export-ignore
+/captainhook.json   export-ignore
+/pint.json          export-ignore
+/CHANGELOG.md export-ignore
+/README.md export-ignore
