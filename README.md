@@ -21,7 +21,7 @@ and event-driven notifications.
 
 ## Requirements
 
-- PHP 8.3+
+- PHP 8.2+
 - Laravel 11/12/13
 
 ## Installation
