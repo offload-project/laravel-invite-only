@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.4.0 - 2026-03-31
+
+### Added
+- Allow localization of date [#15](https://github.com/offload-project/laravel-invite-only/pull/15)
+- Allow localization of date [#15](https://github.com/offload-project/laravel-invite-only/pull/15)
+- Notification message customization via translation/lang [#15](https://github.com/offload-project/laravel-invite-only/pull/15)
+- Notification message customization via translation/lang [#15](https://github.com/offload-project/laravel-invite-only/pull/15)
+
+### Fixed
+- Remove final for extend/override ([ac2ee9c](https://github.com/offload-project/laravel-invite-only/commit/ac2ee9cb32b292058dbea5c1f2c1a35a317bfe55))
+
+### Changed
+- Add git attrs [#14](https://github.com/offload-project/laravel-invite-only/pull/14)
+
+### Other
+- Update workflows, use release champion [#14](https://github.com/offload-project/laravel-invite-only/pull/14)
+
 ## [2.3.0](https://github.com/offload-project/laravel-invite-only/compare/v2.2.0...v2.3.0) (2026-03-31)
 
 
