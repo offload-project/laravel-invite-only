@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/offload-project/laravel-invite-only/compare/v2.2.0...v2.3.0) (2026-03-31)
+
+
+### Features
+
+* passive support for PHP 8.2 ([#12](https://github.com/offload-project/laravel-invite-only/issues/12)) ([df879ed](https://github.com/offload-project/laravel-invite-only/commit/df879ed7b14e6713e6687571b56c3b4df5c3304b))
+
 ## [2.2.0](https://github.com/offload-project/laravel-invite-only/compare/v2.1.0...v2.2.0) (2026-03-30)
 
 
