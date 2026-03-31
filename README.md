@@ -17,6 +17,7 @@ and event-driven notifications.
 - **Status tracking** - Pending, accepted, declined, expired, and cancelled states
 - **Automatic reminders** - Scheduled reminder emails for pending invitations
 - **Event-driven** - Events fired for all invitation lifecycle changes
+- **Translatable notifications** - All notification messages customizable via language files
 - **Structured exceptions** - Error codes and resolution hints for easy debugging
 
 ## Requirements

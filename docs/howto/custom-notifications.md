@@ -1,5 +1,38 @@
 # How to Customize Notifications
 
+## Translate or Customize Message Text
+
+The simplest way to customize notification messages is by publishing the language files:
+
+```bash
+php artisan vendor:publish --tag="invite-only-lang"
+```
+
+This copies the translation files to `lang/vendor/invite-only/en/notifications.php`, where you can edit subjects, greetings, and body text for all notifications.
+
+To add translations for other locales, create a new directory with the locale code and copy the file:
+
+```
+lang/vendor/invite-only/
+├── en/
+│   └── notifications.php
+├── es/
+│   └── notifications.php
+└── fr/
+    └── notifications.php
+```
+
+Date formats are also translatable. The `date_format` key in each notification controls how dates are displayed, using PHP's `translatedFormat()` for locale-aware output:
+
+```php
+// lang/vendor/invite-only/es/notifications.php
+'reminder' => [
+    'subject' => 'Recordatorio: Tu invitación está esperando',
+    'date_format' => 'j \d\e F \d\e Y', // "5 de marzo de 2026"
+    // ...
+],
+```
+
 ## Disable a Notification
 
 Set the notification class to `null` in your config:
