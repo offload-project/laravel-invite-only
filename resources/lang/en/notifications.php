@@ -28,6 +28,7 @@ return [
         'greeting' => 'Hello!',
         'line_with_name' => 'Just a friendly reminder that you have a pending invitation to join :name.',
         'line_without_name' => 'Just a friendly reminder that you have a pending invitation waiting for you.',
+        'date_format' => 'F j, Y',
         'expires_line' => 'This invitation will expire on :date.',
         'action_text' => 'Accept Invitation',
         'footer' => 'If you are not interested, you can safely ignore this email.',
