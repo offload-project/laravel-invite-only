@@ -22,9 +22,15 @@ final class InviteOnlyServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'invite-only');
+
         $this->publishes([
             __DIR__.'/../config/invite-only.php' => config_path('invite-only.php'),
         ], 'invite-only-config');
+
+        $this->publishes([
+            __DIR__.'/../resources/lang' => $this->app->langPath('vendor/invite-only'),
+        ], 'invite-only-lang');
 
         $this->publishesMigrations([
             __DIR__.'/../database/migrations' => database_path('migrations'),

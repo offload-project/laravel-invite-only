@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InvitationReminder extends Notification implements ShouldQueue
+class InvitationReminder extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -32,22 +32,22 @@ final class InvitationReminder extends Notification implements ShouldQueue
         $expiresAt = $this->invitation->expires_at;
 
         $message = (new MailMessage)
-            ->subject('Reminder: Your Invitation is Waiting')
-            ->greeting('Hello!');
+            ->subject(__('invite-only::notifications.reminder.subject'))
+            ->greeting(__('invite-only::notifications.reminder.greeting'));
 
         if ($invitableName !== null) {
-            $message->line("Just a friendly reminder that you have a pending invitation to join {$invitableName}.");
+            $message->line(__('invite-only::notifications.reminder.line_with_name', ['name' => $invitableName]));
         } else {
-            $message->line('Just a friendly reminder that you have a pending invitation waiting for you.');
+            $message->line(__('invite-only::notifications.reminder.line_without_name'));
         }
 
         if ($expiresAt !== null) {
-            $message->line("This invitation will expire on {$expiresAt->format('F j, Y')}.");
+            $message->line(__('invite-only::notifications.reminder.expires_line', ['date' => $expiresAt->format('F j, Y')]));
         }
 
         return $message
-            ->action('Accept Invitation', $this->invitation->getAcceptUrl())
-            ->line('If you are not interested, you can safely ignore this email.');
+            ->action(__('invite-only::notifications.reminder.action_text'), $this->invitation->getAcceptUrl())
+            ->line(__('invite-only::notifications.reminder.footer'));
     }
 
     /**
@@ -62,7 +62,7 @@ final class InvitationReminder extends Notification implements ShouldQueue
         ];
     }
 
-    private function getInvitableName(): ?string
+    protected function getInvitableName(): ?string
     {
         $invitable = $this->invitation->invitable;
 

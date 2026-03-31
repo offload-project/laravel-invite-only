@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use OffloadProject\InviteOnly\Models\Invitation;
 
-final class InvitationAcceptedNotification extends Notification implements ShouldQueue
+class InvitationAcceptedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -32,18 +32,18 @@ final class InvitationAcceptedNotification extends Notification implements Shoul
         $acceptedByEmail = $this->invitation->email;
 
         $message = (new MailMessage)
-            ->subject('Invitation Accepted!')
-            ->greeting('Good news!');
+            ->subject(__('invite-only::notifications.accepted.subject'))
+            ->greeting(__('invite-only::notifications.accepted.greeting'));
 
         if ($invitableName !== null) {
-            $message->line("{$acceptedByEmail} has accepted your invitation to join {$invitableName}.");
+            $message->line(__('invite-only::notifications.accepted.line_with_name', ['email' => $acceptedByEmail, 'name' => $invitableName]));
         } else {
-            $message->line("{$acceptedByEmail} has accepted your invitation.");
+            $message->line(__('invite-only::notifications.accepted.line_without_name', ['email' => $acceptedByEmail]));
         }
 
         return $message
-            ->line('They are now part of your team.')
-            ->action('View Dashboard', url('/'));
+            ->line(__('invite-only::notifications.accepted.team_line'))
+            ->action(__('invite-only::notifications.accepted.action_text'), url('/'));
     }
 
     /**
@@ -58,7 +58,7 @@ final class InvitationAcceptedNotification extends Notification implements Shoul
         ];
     }
 
-    private function getInvitableName(): ?string
+    protected function getInvitableName(): ?string
     {
         $invitable = $this->invitation->invitable;
 
