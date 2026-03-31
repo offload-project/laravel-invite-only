@@ -42,7 +42,7 @@ final class InvitationReminder extends Notification implements ShouldQueue
         }
 
         if ($expiresAt !== null) {
-            $message->line(__('invite-only::notifications.reminder.expires_line', ['date' => $expiresAt->format('F j, Y')]));
+            $message->line(__('invite-only::notifications.reminder.expires_line', ['date' => $expiresAt->translatedFormat(__('invite-only::notifications.reminder.date_format'))]));
         }
 
         return $message
