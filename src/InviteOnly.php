@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace OffloadProject\InviteOnly;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection as BaseCollection;
 use InvalidArgumentException;
 use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
@@ -26,7 +26,7 @@ final class InviteOnly implements InviteOnlyContract
     /**
      * Create a new invitation.
      *
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int}  $options
      *
      * @throws InvalidArgumentException When email format is invalid
      */
@@ -69,7 +69,7 @@ final class InviteOnly implements InviteOnlyContract
      * rather than throwing exceptions, allowing partial success.
      *
      * @param  array<int, string>  $emails
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int, skip_duplicates?: bool}  $options
      */
     public function inviteMany(array $emails, ?Model $invitable = null, array $options = []): BulkInvitationResult
     {
@@ -415,7 +415,7 @@ final class InviteOnly implements InviteOnlyContract
         return $resolved;
     }
 
-    private function getDefaultExpiration(): ?Carbon
+    private function getDefaultExpiration(): ?DateTimeInterface
     {
         if (! config('invite-only.expiration.enabled', true)) {
             return null;

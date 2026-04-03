@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace OffloadProject\InviteOnly\Contracts;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 use OffloadProject\InviteOnly\BulkInvitationResult;
 use OffloadProject\InviteOnly\Exceptions\InvalidInvitationException;
@@ -19,7 +19,7 @@ interface InviteOnlyContract
     /**
      * Create a new invitation.
      *
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int}  $options
      *
      * @throws InvalidArgumentException When email format is invalid
      */
@@ -32,7 +32,7 @@ interface InviteOnlyContract
      * rather than throwing exceptions, allowing partial success.
      *
      * @param  array<int, string>  $emails
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int, skip_duplicates?: bool}  $options
      */
     public function inviteMany(array $emails, ?Model $invitable = null, array $options = []): BulkInvitationResult;
 

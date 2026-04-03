@@ -1,0 +1,7 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Class OffloadProject\\InviteOnly\\Facades\\InviteOnly has PHPDoc tag @method for method invite\(\) parameter \#3 \$options with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Facades/InviteOnly.php
