@@ -11,7 +11,7 @@ use OffloadProject\InviteOnly\Contracts\InviteOnlyContract;
 use OffloadProject\InviteOnly\Models\Invitation;
 
 /**
- * @method static Invitation invite(string $email, ?Model $invitable = null, array{role?: string, metadata?: array<string, mixed>, expires_at?: \Illuminate\Support\Carbon, invited_by?: Model|int} $options = [])
+ * @method static Invitation invite(string $email, ?Model $invitable = null, array $options = [])
  * @method static Invitation accept(string $token, ?Model $user = null)
  * @method static Invitation decline(string $token)
  * @method static Invitation cancel(Invitation|int $invitation, bool $notify = false)

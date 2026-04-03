@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace OffloadProject\InviteOnly\Traits;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Support\Carbon;
 use OffloadProject\InviteOnly\BulkInvitationResult;
 use OffloadProject\InviteOnly\Enums\InvitationStatus;
 use OffloadProject\InviteOnly\Facades\InviteOnly;
@@ -33,7 +33,7 @@ trait HasInvitations
     /**
      * Create a new invitation for this model.
      *
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int}  $options
      */
     public function invite(string $email, array $options = []): Invitation
     {
@@ -45,7 +45,7 @@ trait HasInvitations
      * Create multiple invitations for this model at once.
      *
      * @param  array<int, string>  $emails
-     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: Carbon, invited_by?: Model|int, skip_duplicates?: bool}  $options
+     * @param  array{role?: string, metadata?: array<string, mixed>, expires_at?: DateTimeInterface, invited_by?: Model|int, skip_duplicates?: bool}  $options
      */
     public function inviteMany(array $emails, array $options = []): BulkInvitationResult
     {
