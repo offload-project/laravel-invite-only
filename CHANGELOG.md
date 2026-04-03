@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.4.1 - 2026-04-03
+
+### Fixed
+- Changed return type to ?DateTimeInterface ([0653ea2](https://github.com/offload-project/laravel-invite-only/commit/0653ea25358164f7570135accb4f405ad168d75c))
+
+### Other
+- Update release workflow permissions [#18](https://github.com/offload-project/laravel-invite-only/pull/18)
+
 ## v2.4.0 - 2026-03-31
 
 ### Added
