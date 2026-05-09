@@ -75,7 +75,7 @@ public function invitations(Team $team)
 {
     return view('teams.invitations', [
         'pending' => $team->pendingInvitations(),
-        'accepted' => $team->acceptedInvitations(),
+        'accepted' => $team->getAcceptedInvitations(),
         'stats' => $team->getInvitationStats(),
     ]);
 }
