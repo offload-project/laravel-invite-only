@@ -257,7 +257,8 @@ $team->invitations(): MorphMany
 $team->invite(string $email, array $options = []): Invitation
 $team->inviteMany(array $emails, array $options = []): BulkInvitationResult
 $team->pendingInvitations(): Collection
-$team->acceptedInvitations(): Collection
+$team->getAcceptedInvitations(): Collection
+$team->acceptedInvitations(): Collection  // Deprecated, removed in 3.0 — use getAcceptedInvitations()
 $team->validInvitations(): Collection
 $team->cancelInvitation(string $email, bool $notify = false): bool
 $team->resendInvitation(string $email): bool

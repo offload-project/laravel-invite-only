@@ -59,6 +59,27 @@ class User extends Authenticatable
 }
 ```
 
+If a model both sends and receives invitations (e.g. user-to-user friend
+invitations), apply both traits. The two traits each define an
+`acceptedInvitations()` method, so use PHP's trait conflict resolution:
+
+```php
+use OffloadProject\InviteOnly\Traits\CanBeInvited;
+use OffloadProject\InviteOnly\Traits\HasInvitations;
+
+class User extends Authenticatable
+{
+    use HasInvitations, CanBeInvited {
+        CanBeInvited::acceptedInvitations insteadof HasInvitations;
+        HasInvitations::acceptedInvitations as acceptedInvitationsToModel;
+    }
+}
+```
+
+In v3.0 the `HasInvitations::acceptedInvitations()` helper will be removed in
+favour of `getAcceptedInvitations()`, eliminating the conflict — at which point
+the `insteadof`/`as` clauses can be dropped.
+
 ### 2. Send Invitations
 
 ```php

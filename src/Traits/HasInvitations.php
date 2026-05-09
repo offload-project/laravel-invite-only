@@ -68,9 +68,21 @@ trait HasInvitations
      *
      * @return Collection<int, Invitation>
      */
-    public function acceptedInvitations(): Collection
+    public function getAcceptedInvitations(): Collection
     {
         return $this->invitations()->accepted()->get();
+    }
+
+    /**
+     * Get all accepted invitations for this model.
+     *
+     * @return Collection<int, Invitation>
+     *
+     * @deprecated 2.5.0 Use {@see self::getAcceptedInvitations()} instead. Will be removed in 3.0. Renamed so this trait can coexist with CanBeInvited (which defines an acceptedInvitations() relation) on the same model.
+     */
+    public function acceptedInvitations(): Collection
+    {
+        return $this->getAcceptedInvitations();
     }
 
     /**
