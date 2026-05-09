@@ -346,6 +346,26 @@ describe('HasInvitations trait', function (): void {
         expect($team->pendingInvitations())->toHaveCount(0);
     });
 
+    it('can get accepted invitations', function (): void {
+        $team = TestTeam::create(['name' => 'Test Team']);
+        $team->invite('pending@example.com');
+        $accepted = $team->invite('accepted@example.com');
+        $accepted->markAsAccepted();
+
+        $result = $team->getAcceptedInvitations();
+
+        expect($result)->toHaveCount(1);
+        expect($result->first()->email)->toBe('accepted@example.com');
+    });
+
+    it('exposes deprecated acceptedInvitations alias', function (): void {
+        $team = TestTeam::create(['name' => 'Test Team']);
+        $accepted = $team->invite('accepted@example.com');
+        $accepted->markAsAccepted();
+
+        expect($team->acceptedInvitations())->toHaveCount(1);
+    });
+
     it('can get invitation stats', function (): void {
         $team = TestTeam::create(['name' => 'Test Team']);
         $team->invite('pending@example.com');
