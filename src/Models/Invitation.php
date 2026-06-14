@@ -91,8 +91,14 @@ final class Invitation extends Model
         'role',
         'metadata',
         'invited_by',
-        'expires_at',
+        'accepted_by',
         'status',
+        'expires_at',
+        'accepted_at',
+        'declined_at',
+        'cancelled_at',
+        'last_sent_at',
+        'reminder_count',
     ];
 
     /** @var array<string, string> */
