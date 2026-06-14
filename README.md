@@ -1,10 +1,10 @@
-<p align="center">
-    <a href="https://packagist.org/packages/offload-project/laravel-invite-only"><img src="https://img.shields.io/packagist/v/offload-project/laravel-invite-only.svg?style=flat-square" alt="Latest Version on Packagist"></a>
-    <a href="https://github.com/offload-project/laravel-invite-only/actions"><img src="https://img.shields.io/github/actions/workflow/status/offload-project/laravel-invite-only/tests.yml?branch=main&style=flat-square" alt="GitHub Tests Action Status"></a>
-    <a href="https://packagist.org/packages/offload-project/laravel-invite-only"><img src="https://img.shields.io/packagist/dt/offload-project/laravel-invite-only.svg?style=flat-square" alt="Total Downloads"></a>
-</p>
-
 # Laravel Invite Only
+
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/offload-project/laravel-invite-only.svg?style=flat-square)](https://packagist.org/packages/offload-project/laravel-invite-only)
+[![Tests](https://img.shields.io/github/actions/workflow/status/offload-project/laravel-invite-only/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/offload-project/laravel-invite-only/actions/workflows/tests.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/offload-project/laravel-invite-only/release.yml?label=build&style=flat-square)](https://github.com/offload-project/laravel-invite-only/actions/workflows/release.yml)
+[![Total Downloads](https://img.shields.io/packagist/dt/offload-project/laravel-invite-only.svg?style=flat-square)](https://packagist.org/packages/offload-project/laravel-invite-only)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE.md)
 
 A Laravel package for managing user invitations with polymorphic relationships, token-based access, scheduled reminders,
 and event-driven notifications.
@@ -149,7 +149,8 @@ Schedule::command('invite-only:send-reminders --mark-expired')->daily();
 
 ## AI Coding Assistant Skill
 
-This package ships a [Laravel Boost](https://skills.laravel.cloud/) skill so coding assistants (Claude Code, Cursor, etc.) follow the package's conventions when generating code. Install it in your app with:
+This package ships a [Laravel Boost](https://skills.laravel.cloud/) skill so coding assistants (Claude Code, Cursor,
+etc.) follow the package's conventions when generating code. Install it in your app with:
 
 ```bash
 php artisan boost:add-skill offload-project/laravel-invite-only
