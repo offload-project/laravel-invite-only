@@ -40,6 +40,12 @@ jobs:
           composer config policy.advisories.block false
           fi
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+          # nesbot/carbon >=3.10 added ?bool $overflow to Carbon::plus()/minus().
+          # Laravel 11.x and 12.x never updated Illuminate\Support\Carbon's override,
+          # so on PHP 8.4+ the LSP check is fatal. Cap Carbon for those matrices.
+          if [[ "${{ matrix.laravel }}" != "13.*" ]]; then
+            composer require "nesbot/carbon:^2.72.6 || >=3.0,<3.10" --no-interaction --no-update
+          fi
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: Execute tests
