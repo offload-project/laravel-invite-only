@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.5.0 - 2026-06-14
+
+### Documentation
+- Add missing, updates [#22](https://github.com/offload-project/laravel-invite-only/pull/22)
+
+### Other
+- add Laravel Boost skill, model fillable array [#24](https://github.com/offload-project/laravel-invite-only/pull/24)
+- HasInvitations acceptedInvitations in favor of getAccepted… [#21](https://github.com/offload-project/laravel-invite-only/pull/21)
+
 ## v2.4.1 - 2026-04-03
 
 ### Fixed
