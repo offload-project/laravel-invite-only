@@ -20,6 +20,21 @@ and event-driven notifications.
 - **Translatable notifications** - All notification messages customizable via language files
 - **Structured exceptions** - Error codes and resolution hints for easy debugging
 
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+    - [Add Traits](#1-add-traits)
+    - [Send Invitations](#2-send-invitations)
+    - [Handle Acceptance](#3-handle-acceptance)
+    - [Schedule Reminders (Optional)](#4-schedule-reminders-optional)
+- [Full Documentation](#full-documentation)
+- [AI Coding Assistant Skill](#ai-coding-assistant-skill)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Requirements
 
 - PHP 8.2+
@@ -120,7 +135,7 @@ Event::listen(InvitationAccepted::class, function ($event) {
 Schedule::command('invite-only:send-reminders --mark-expired')->daily();
 ```
 
-## Documentation
+## Full Documentation
 
 - **[Getting Started](docs/getting-started.md)** - Step-by-step tutorial
 - **[API Reference](docs/reference.md)** - All methods, events, and configuration
@@ -132,12 +147,33 @@ Schedule::command('invite-only:send-reminders --mark-expired')->daily();
 - [Custom Notifications](docs/howto/custom-notifications.md)
 - [Handling Errors](docs/howto/handling-errors.md)
 
+## AI Coding Assistant Skill
+
+This package ships a [Laravel Boost](https://skills.laravel.cloud/) skill so coding assistants (Claude Code, Cursor, etc.) follow the package's conventions when generating code. Install it in your app with:
+
+```bash
+php artisan boost:add-skill offload-project/laravel-invite-only
+```
+
+The skill source lives at [`skills/SKILL.md`](skills/SKILL.md).
+
 ## Testing
 
 ```bash
 composer test
 ```
 
+## Contributing
+
+Contributions are welcome! Please see the documents below before getting started.
+
+- [Contributing Guide](CONTRIBUTING.md) — setup, workflow, commit conventions, and PR process
+- [Code of Conduct](CODE_OF_CONDUCT.md) — expectations for participation in this project
+
+## Security
+
+- [Security Policy](SECURITY.md) — how to report a vulnerability privately
+
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
