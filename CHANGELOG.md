@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.4.2 - 2026-06-14
+
+### Documentation
+- Add missing, updates [#22](https://github.com/offload-project/laravel-invite-only/pull/22)
+
+### Other
+- HasInvitations acceptedInvitations in favor of getAccepted… [#21](https://github.com/offload-project/laravel-invite-only/pull/21)
+
 ## v2.4.1 - 2026-04-03
 
 ### Fixed
