@@ -36,6 +36,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          if [[ "${{ matrix.laravel }}" == "11.*" ]]; then
+          composer config policy.advisories.block false
+          fi
           composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
