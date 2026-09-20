@@ -28,22 +28,13 @@ class InvitationSent extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $invitableName = $this->getInvitableName();
-
-        $message = (new MailMessage)
+        return (new MailMessage)
             ->subject(__('invite-only::notifications.invitation.subject'))
-            ->greeting(__('invite-only::notifications.invitation.greeting'));
-
-        if ($invitableName !== null) {
-            $message->line(__('invite-only::notifications.invitation.line_with_name', ['name' => $invitableName]));
-        } else {
-            $message->line(__('invite-only::notifications.invitation.line_without_name'));
-        }
-
-        return $message
-            ->line(__('invite-only::notifications.invitation.action_line'))
-            ->action(__('invite-only::notifications.invitation.action_text'), $this->invitation->getAcceptUrl())
-            ->line(__('invite-only::notifications.invitation.footer'));
+            ->markdown('invite-only::mail.invitation', [
+                'invitableName' => $this->getInvitableName(),
+                'url' => $this->invitation->getAcceptUrl(),
+                'invitation' => $this->invitation,
+            ]);
     }
 
     /**

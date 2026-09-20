@@ -28,26 +28,18 @@ class InvitationReminder extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $invitableName = $this->getInvitableName();
         $expiresAt = $this->invitation->expires_at;
 
-        $message = (new MailMessage)
+        return (new MailMessage)
             ->subject(__('invite-only::notifications.reminder.subject'))
-            ->greeting(__('invite-only::notifications.reminder.greeting'));
-
-        if ($invitableName !== null) {
-            $message->line(__('invite-only::notifications.reminder.line_with_name', ['name' => $invitableName]));
-        } else {
-            $message->line(__('invite-only::notifications.reminder.line_without_name'));
-        }
-
-        if ($expiresAt !== null) {
-            $message->line(__('invite-only::notifications.reminder.expires_line', ['date' => $expiresAt->translatedFormat(__('invite-only::notifications.reminder.date_format'))]));
-        }
-
-        return $message
-            ->action(__('invite-only::notifications.reminder.action_text'), $this->invitation->getAcceptUrl())
-            ->line(__('invite-only::notifications.reminder.footer'));
+            ->markdown('invite-only::mail.reminder', [
+                'invitableName' => $this->getInvitableName(),
+                // Formatted here so the view has a string to print and does
+                // not need to know the date format key.
+                'expiresAt' => $expiresAt?->translatedFormat(__('invite-only::notifications.reminder.date_format')),
+                'url' => $this->invitation->getAcceptUrl(),
+                'invitation' => $this->invitation,
+            ]);
     }
 
     /**

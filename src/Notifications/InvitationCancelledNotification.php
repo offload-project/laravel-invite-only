@@ -28,19 +28,12 @@ class InvitationCancelledNotification extends Notification implements ShouldQueu
 
     public function toMail(object $notifiable): MailMessage
     {
-        $invitableName = $this->getInvitableName();
-
-        $message = (new MailMessage)
+        return (new MailMessage)
             ->subject(__('invite-only::notifications.cancelled.subject'))
-            ->greeting(__('invite-only::notifications.cancelled.greeting'));
-
-        if ($invitableName !== null) {
-            $message->line(__('invite-only::notifications.cancelled.line_with_name', ['name' => $invitableName]));
-        } else {
-            $message->line(__('invite-only::notifications.cancelled.line_without_name'));
-        }
-
-        return $message->line(__('invite-only::notifications.cancelled.footer'));
+            ->markdown('invite-only::mail.cancelled', [
+                'invitableName' => $this->getInvitableName(),
+                'invitation' => $this->invitation,
+            ]);
     }
 
     /**

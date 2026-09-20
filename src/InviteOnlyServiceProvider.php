@@ -23,6 +23,7 @@ final class InviteOnlyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'invite-only');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'invite-only');
 
         $this->publishes([
             __DIR__.'/../config/invite-only.php' => config_path('invite-only.php'),
@@ -31,6 +32,16 @@ final class InviteOnlyServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../resources/lang' => $this->app->langPath('vendor/invite-only'),
         ], 'invite-only-lang');
+
+        /*
+         * The emails themselves. Publishing the translations lets an
+         * application change the words; this lets it change the shape — add a
+         * logo, drop the button, restyle the whole thing — without
+         * reimplementing the notifications.
+         */
+        $this->publishes([
+            __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/invite-only'),
+        ], 'invite-only-views');
 
         $this->publishesMigrations([
             __DIR__.'/../database/migrations' => database_path('migrations'),
