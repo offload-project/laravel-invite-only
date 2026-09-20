@@ -10,5 +10,15 @@ parameters:
     level: 7
 
     ignoreErrors:
+        # The notifications render this package's own views, named through the
+        # `invite-only::` namespace that `loadViewsFrom` registers at runtime.
+        # Analysed on its own there is no application container to register it,
+        # so the names cannot be resolved and every `markdown()` call reads as
+        # an unverifiable view. `NotificationMailTest` renders all four, which
+        # is what actually proves they exist.
+        - identifier: argument.type
+          message: '#markdown\(\) expects view-string#'
+          path: src/Notifications/*.php
+
         # These traits are meant to be used by package consumers
         - identifier: trait.unused
