@@ -1,5 +1,14 @@
 # Changelog
 
+## v2.6.0 - 2026-09-20
+
+### Added
+- Publish the invitation emails, not just lang [#26](https://github.com/offload-project/laravel-invite-only/pull/26)
+
+### Documentation
+- Update badges ([437c603](https://github.com/offload-project/laravel-invite-only/commit/437c6035bec9fb89466fcd20eb2f19c12374492b))
+- Remove changelog update item ([b1ce5ec](https://github.com/offload-project/laravel-invite-only/commit/b1ce5ec6aa6ce4ad73e57b405e2f5400063b6a78))
+
 ## v2.5.0 - 2026-06-14
 
 ### Documentation
